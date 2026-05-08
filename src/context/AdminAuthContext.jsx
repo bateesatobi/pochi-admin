@@ -22,7 +22,7 @@ export const AdminAuthProvider = ({ children }) => {
     form.append('password', password);
 
     const res = await axios.post(
-      'http://146.190.202.220/api/v1/auth/admin/login',
+      'https://pakacha.com/api/v1/auth/admin/login',
       form,
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
@@ -31,7 +31,7 @@ export const AdminAuthProvider = ({ children }) => {
     localStorage.setItem('admin_token', token);
 
     // Fetch profile
-    const me = await axios.get('http://146.190.202.220/api/v1/auth/me', {
+    const me = await axios.get('https://pakacha.com/api/v1/auth/me', {
       headers: { Authorization: `Bearer ${token}` }
     });
     localStorage.setItem('admin_user', JSON.stringify(me.data));
@@ -56,7 +56,7 @@ export const useAdminAuth = () => useContext(AdminAuthContext);
 
 export const getToken = () => localStorage.getItem('admin_token');
 
-export const api = axios.create({ baseURL: 'http://146.190.202.220/api/v1' });
+export const api = axios.create({ baseURL: 'https://pakacha.com/api/v1' });
 
 api.interceptors.request.use(config => {
   const token = getToken();
