@@ -1,0 +1,395 @@
+.admin-payments {
+    padding: 0;
+}
+
+/* ── Header ── */
+.ap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.ap-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 4px;
+    letter-spacing: -0.02em;
+}
+
+.ap-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.ap-btn-refresh {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ap-btn-refresh:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+/* ── KPI Row ── */
+.ap-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.ap-kpi {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    transition: transform 0.2s;
+}
+
+.ap-kpi:hover { transform: translateY(-2px); }
+
+.ap-kpi-attention {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: rgba(254, 249, 195, 0.4);
+}
+
+.ap-kpi-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ap-kpi-collected  { background: #EEF2FF; color: #4F46E5; }
+.ap-kpi-fee        { background: #F0FDF4; color: #16a34a; }
+.ap-kpi-disbursed  { background: rgba(255, 127, 80, 0.12); color: var(--primary); }
+.ap-kpi-pending    { background: #FEF9C3; color: #b45309; }
+
+.ap-kpi-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+}
+
+.ap-kpi-value {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+/* ── Tabs ── */
+.ap-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 22px;
+}
+
+.ap-tab {
+    padding: 10px 18px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ap-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+/* ── Pending Disbursement Cards ── */
+.ap-pending-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.ap-pending-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: box-shadow 0.2s;
+}
+
+.ap-pending-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+}
+
+.ap-pending-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.ap-biz-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ap-biz-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: var(--primary);
+    color: white;
+    font-size: 18px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ap-biz-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.ap-biz-email {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.ap-pending-balance {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.ap-pending-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.ap-pending-amount {
+    font-size: 20px;
+    font-weight: 800;
+    color: #16a34a;
+}
+
+.ap-pending-breakdown {
+    background: #F8FAFC;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ap-breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+}
+
+.ap-breakdown-row.fee span:last-child   { color: #ef4444; font-weight: 700; }
+.ap-breakdown-row.disbursed span:last-child { color: var(--text-muted); font-weight: 600; }
+
+.ap-payout-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #F0FDF4;
+    border: 1px solid #BBF7D0;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #15803d;
+    font-weight: 500;
+}
+
+.ap-payout-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #FEF9C3;
+    border: 1px solid #FDE68A;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #92400e;
+    font-weight: 600;
+}
+
+.ap-btn-disburse {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    padding: 13px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(255, 127, 80, 0.25);
+    font-family: inherit;
+}
+
+.ap-btn-disburse:hover:not(:disabled) {
+    background: var(--primary-h, #e66a3e);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(255, 127, 80, 0.35);
+}
+
+.ap-btn-disburse:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ── Table ── */
+.ap-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.ap-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.ap-table th {
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    background: rgba(0,0,0,0.02);
+    border-bottom: 1px solid var(--border);
+}
+
+.ap-table td {
+    padding: 13px 14px;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    color: var(--text);
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.ap-table tr:last-child td { border-bottom: none; }
+.ap-table tr:hover td { background: rgba(0,0,0,0.015); }
+
+.ref-code {
+    font-size: 11px;
+    background: rgba(0,0,0,0.05);
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-weight: 600;
+    font-family: monospace;
+}
+
+.amount-col { font-weight: 700; }
+.fee-col    { color: #ef4444; font-weight: 700; }
+.net-col    { color: #16a34a; font-weight: 800; }
+.date-col   { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+.na-dash    { color: var(--text-muted); }
+.biz-col    { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+
+.ap-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.status-completed { background: #DCFCE7; color: #166534; }
+.status-pending   { background: #FEF9C3; color: #854d0e; }
+.status-failed    { background: #FEE2E2; color: #991b1b; }
+.status-cancelled { background: #F1F5F9; color: #475569; }
+
+/* ── Empty & Loading ── */
+.ap-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    padding: 60px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+}
+
+.ap-empty-icon { color: var(--text-muted); opacity: 0.35; }
+.ap-empty h3   { font-size: 16px; font-weight: 700; color: var(--text); margin: 0; }
+.ap-empty p    { font-size: 13px; color: var(--text-muted); margin: 0; max-width: 380px; }
+
+.ap-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 48px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+}

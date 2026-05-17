@@ -4,6 +4,7 @@ import {
   Layers, Archive, Activity, Eye, ChevronLeft, ChevronRight, MapPin 
 } from 'lucide-react';
 import { api } from '../context/AdminAuthContext';
+import Swal from 'sweetalert2';
 
 // Helper to ensure base64 has data URI prefix
 const formatImage = (b64) => {
@@ -13,8 +14,11 @@ const formatImage = (b64) => {
 };
 
 const Products = () => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState(() => {
+    const cached = localStorage.getItem('cached_admin_products');
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(products.length === 0);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -24,9 +28,12 @@ const Products = () => {
   const PER_PAGE = 15;
 
   const fetchProducts = async () => {
-    setLoading(true);
-    try { const r = await api.get('/admin/products'); setProducts(r.data); }
-    catch (e) { console.error(e); }
+    if (products.length === 0) setLoading(true);
+    try { 
+      const r = await api.get('/admin/products'); 
+      setProducts(r.data); 
+      localStorage.setItem('cached_admin_products', JSON.stringify(r.data));
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -54,17 +61,70 @@ const Products = () => {
     setActionLoading(true);
     try {
       const r = await api.patch(`/admin/products/${sku}/status`);
-      setProducts(prev => prev.map(p => p.sku === sku ? { ...p, is_active: r.data.is_active } : p));
+      setProducts(prev => {
+        const next = prev.map(p => p.sku === sku ? { ...p, is_active: r.data.is_active } : p);
+        localStorage.setItem('cached_admin_products', JSON.stringify(next));
+        return next;
+      });
       if (selected?.product?.sku === sku) setSelected(s => ({ ...s, product: { ...s.product, is_active: r.data.is_active } }));
-    } catch (e) { alert(e.response?.data?.detail || 'Failed'); }
+      Swal.fire({
+        icon: 'success',
+        title: 'Status Toggled',
+        text: `Product status is now ${r.data.is_active ? 'Active' : 'Inactive'}.`,
+        confirmButtonColor: '#FF7F50',
+      });
+    } catch (e) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Action Failed',
+        text: e.response?.data?.detail || 'Failed to toggle product status.',
+        confirmButtonColor: '#FF7F50',
+      });
+    }
     setActionLoading(false);
   };
 
   const deleteProduct = async (sku) => {
-    if (!confirm('Delete this product permanently?')) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Delete this product permanently?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    if (!result.isConfirmed) return;
+
     setActionLoading(true);
-    try { await api.delete(`/admin/products/${sku}`); setDrawerOpen(false); await fetchProducts(); }
-    catch (e) { alert(e.response?.data?.detail || 'Failed'); }
+    try { 
+      await api.delete(`/admin/products/${sku}`); 
+      
+      // Optimistic Update: Immediately remove from local state and cache
+      setProducts(prev => {
+        const next = prev.filter(p => p.sku !== sku);
+        localStorage.setItem('cached_admin_products', JSON.stringify(next));
+        return next;
+      });
+      setDrawerOpen(false); 
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'The product listing has been deleted.',
+        confirmButtonColor: '#FF7F50',
+      });
+      
+      // Reload in the background
+      fetchProducts(); 
+    } catch (e) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
+        text: e.response?.data?.detail || 'Failed to delete the product listing.',
+        confirmButtonColor: '#FF7F50',
+      });
+    }
     setActionLoading(false);
   };
 

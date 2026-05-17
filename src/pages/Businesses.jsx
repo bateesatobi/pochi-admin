@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Search, X, Eye, CheckCircle, XCircle, AlertCircle, Trash2, RefreshCw, BarChart3, TrendingUp, Package, Clock, ShieldAlert, Wallet } from 'lucide-react';
 import { api } from '../context/AdminAuthContext';
+import Swal from 'sweetalert2';
 
 const STATUS_OPTIONS = ['', 'BASIC_REGISTERED', 'KYC_SUBMITTED', 'APPROVED', 'REJECTED', 'SUSPENDED'];
 
 const Businesses = () => {
-  const [businesses, setBusinesses] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [businesses, setBusinesses] = useState(() => {
+    const cached = localStorage.getItem('cached_admin_businesses');
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(businesses.length === 0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selected, setSelected] = useState(null);
@@ -16,11 +20,14 @@ const Businesses = () => {
   const PER_PAGE = 12;
 
   const fetch = async () => {
-    setLoading(true);
+    if (businesses.length === 0) setLoading(true);
     try {
       const params = statusFilter ? `?status=${statusFilter}` : '';
       const r = await api.get(`/admin/businesses${params}`);
       setBusinesses(r.data);
+      if (!statusFilter) {
+        localStorage.setItem('cached_admin_businesses', JSON.stringify(r.data));
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -49,23 +56,70 @@ const Businesses = () => {
     setActionLoading(true);
     try {
       await api.patch(`/admin/businesses/${id}/status?new_status=${status}`);
+      localStorage.removeItem('cached_admin_businesses');
       await fetch();
       if (selected?.business?.id === id) {
         const r = await api.get(`/admin/businesses/${id}`);
         setSelected(r.data);
       }
-    } catch (e) { alert(e.response?.data?.detail || 'Action failed'); }
+      Swal.fire({
+        icon: 'success',
+        title: 'Status Updated!',
+        text: `Business status successfully updated to ${status}.`,
+        confirmButtonColor: '#FF7F50',
+      });
+    } catch (e) { 
+      Swal.fire({
+        icon: 'error',
+        title: 'Action Failed',
+        text: e.response?.data?.detail || 'Action failed',
+        confirmButtonColor: '#FF7F50',
+      });
+    }
     setActionLoading(false);
   };
 
   const deleteBiz = async (id) => {
-    if (!confirm('Delete this business permanently?')) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Delete this business permanently?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    if (!result.isConfirmed) return;
+    
     setActionLoading(true);
     try {
       await api.delete(`/admin/businesses/${id}`);
+      
+      // Optimistic Update: Immediately remove from local state and cache
+      setBusinesses(prev => {
+        const next = prev.filter(b => b.id !== id);
+        localStorage.setItem('cached_admin_businesses', JSON.stringify(next));
+        return next;
+      });
       setDrawerOpen(false);
-      await fetch();
-    } catch (e) { alert(e.response?.data?.detail || 'Delete failed'); }
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'The business profile has been deleted.',
+        confirmButtonColor: '#FF7F50',
+      });
+      
+      // Reload in the background
+      fetch();
+    } catch (e) { 
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
+        text: e.response?.data?.detail || 'Delete failed',
+        confirmButtonColor: '#FF7F50',
+      });
+    }
     setActionLoading(false);
   };
 

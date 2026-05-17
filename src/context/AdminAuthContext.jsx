@@ -56,7 +56,14 @@ export const useAdminAuth = () => useContext(AdminAuthContext);
 
 export const getToken = () => localStorage.getItem('admin_token');
 
-export const api = axios.create({ baseURL: 'https://pakacha.com/api/v1' });
+const getBaseURL = () => {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'https://pakacha.com/api/v1';
+  }
+  return 'https://pakacha.com/api/v1';
+};
+
+export const api = axios.create({ baseURL: getBaseURL() });
 
 api.interceptors.request.use(config => {
   const token = getToken();

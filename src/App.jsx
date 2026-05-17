@@ -10,6 +10,65 @@ import Products from './pages/Products';
 import Orders from './pages/Orders';
 import AuditLogs from './pages/AuditLogs';
 import Settings from './pages/Settings';
+import AdminPayments from './pages/Payments';
+import AdminNotifications from './components/AdminNotifications';
+
+import Swal from 'sweetalert2';
+import { WebSocketProvider, useWebSocket } from './context/WebSocketContext';
+import { useEffect } from 'react';
+
+const WebSocketListener = () => {
+  const { subscribe } = useWebSocket();
+
+  useEffect(() => {
+    // 1. Listen for new orders
+    const unsubNewOrder = subscribe('ORDER_NEW', (order) => {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: `🛒 New Order Placed!`,
+        text: `Order #${order.order_id.slice(0, 8)} totaling UGX ${Number(order.total).toLocaleString()} was received.`,
+        showConfirmButton: false,
+        timer: 5000,
+        timerProgressBar: true,
+        background: '#0b182a',
+        color: '#fff',
+      });
+      window.dispatchEvent(new CustomEvent('poch-order-new', { detail: order }));
+    });
+
+    // 2. Listen for disbursements
+    const unsubDisb = subscribe('DISBURSEMENT_COMPLETED', (disb) => {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `💰 Payout Processed!`,
+        text: `Disbursed UGX ${Number(disb.amount).toLocaleString()} to ${disb.business_name}.`,
+        showConfirmButton: false,
+        timer: 5000,
+        timerProgressBar: true,
+        background: '#0b182a',
+        color: '#fff',
+      });
+      window.dispatchEvent(new CustomEvent('poch-disbursement-completed', { detail: disb }));
+    });
+
+    // 3. Listen for order status updates
+    const unsubStatus = subscribe('ORDER_STATUS_CHANGED', (evt) => {
+      window.dispatchEvent(new CustomEvent('poch-order-status-changed', { detail: evt }));
+    });
+
+    return () => {
+      unsubNewOrder();
+      unsubDisb();
+      unsubStatus();
+    };
+  }, [subscribe]);
+
+  return null;
+};
 
 const ProtectedLayout = () => {
   const { admin, loading } = useAdminAuth();
@@ -29,6 +88,7 @@ const ProtectedLayout = () => {
     '/users': 'Users & Customers',
     '/products': 'Product Moderation',
     '/orders': 'Order Oversight',
+    '/payments': 'Payments & Disbursements',
     '/audit-logs': 'Audit Logs',
     '/settings': 'System Settings',
   };
@@ -36,11 +96,13 @@ const ProtectedLayout = () => {
 
   return (
     <div className="admin-layout">
+      <WebSocketListener />
       <Sidebar />
       <div className="admin-main">
         <header className="topbar">
           <div className="topbar-title">{title}</div>
           <div className="topbar-right">
+            <AdminNotifications />
             <div className="admin-badge">
               <div className="admin-avatar">{admin?.full_name?.[0] || 'A'}</div>
               <div className="admin-info">
@@ -58,25 +120,37 @@ const ProtectedLayout = () => {
   );
 };
 
+const WebSocketWrapper = ({ children }) => {
+  const token = localStorage.getItem('admin_token');
+  return (
+    <WebSocketProvider token={token}>
+      {children}
+    </WebSocketProvider>
+  );
+};
+
 function App() {
   return (
     <AdminAuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route element={<ProtectedLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/businesses" element={<Businesses />} />
-            <Route path="/users" element={<UsersPage />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/audit-logs" element={<AuditLogs />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <WebSocketWrapper>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<ProtectedLayout />}>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/businesses" element={<Businesses />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/payments" element={<AdminPayments />} />
+              <Route path="/audit-logs" element={<AuditLogs />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </WebSocketWrapper>
     </AdminAuthProvider>
   );
 }

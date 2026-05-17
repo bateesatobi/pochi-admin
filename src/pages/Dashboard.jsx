@@ -39,19 +39,27 @@ const StatCard = ({ icon: Icon, label, value, subValue, trend, color, sparkData 
 );
 
 const Dashboard = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(() => {
+    const cached = localStorage.getItem('cached_admin_stats');
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [loading, setLoading] = useState(!data);
 
   const fetchStats = async () => {
-    setLoading(true);
     try {
       const r = await api.get('/admin/stats');
       setData(r.data);
-    } catch (e) { console.error(e); }
-    setLoading(false);
+      localStorage.setItem('cached_admin_stats', JSON.stringify(r.data));
+    } catch (e) { 
+      console.error(e); 
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => { 
+    fetchStats(); 
+  }, []);
 
   if (loading) return (
     <div className="loader-wrap-modern">

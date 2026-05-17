@@ -12,8 +12,11 @@ const formatImage = (b64) => {
 };
 
 const Orders = () => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState(() => {
+    const cached = localStorage.getItem('cached_admin_orders');
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(orders.length === 0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -24,7 +27,7 @@ const Orders = () => {
   const PER_PAGE = 12;
 
   const fetchOrders = async () => {
-    setLoading(true);
+    if (orders.length === 0) setLoading(true);
     try {
       let url = `/admin/orders?status=${statusFilter}`;
       if (startDate) url += `&start_date=${startDate}`;
@@ -32,11 +35,33 @@ const Orders = () => {
 
       const r = await api.get(url);
       setOrders(r.data);
+      if (!statusFilter && !startDate && !endDate) {
+        localStorage.setItem('cached_admin_orders', JSON.stringify(r.data));
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   };
 
   useEffect(() => { fetchOrders(); }, [statusFilter, startDate, endDate]);
+
+  useEffect(() => {
+    const handleNewOrder = () => {
+      console.log("Real-time new order event received. Reloading...");
+      fetchOrders();
+    };
+    const handleStatusChanged = () => {
+      console.log("Real-time order status update event received. Reloading...");
+      fetchOrders();
+    };
+
+    window.addEventListener('poch-order-new', handleNewOrder);
+    window.addEventListener('poch-order-status-changed', handleStatusChanged);
+
+    return () => {
+      window.removeEventListener('poch-order-new', handleNewOrder);
+      window.removeEventListener('poch-order-status-changed', handleStatusChanged);
+    };
+  }, []);
 
   const filtered = orders.filter(o =>
     o.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -67,7 +92,7 @@ const Orders = () => {
         <button className="btn btn-ghost btn-sm" onClick={fetchOrders}><RefreshCw size={14} /> Refresh</button>
       </div>
 
-      <div className="stats-grid">
+      <div className="stat-grid">
         <div className="stat-card">
           <div className="stat-icon" style={{ background: 'rgba(79,70,229,0.1)', color: 'var(--primary)' }}><ShoppingCart size={20} /></div>
           <div className="stat-info">

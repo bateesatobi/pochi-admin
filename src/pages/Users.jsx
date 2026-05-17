@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search, X, Eye, UserCheck, UserX, Trash2, ShoppingBag, CreditCard, Building2, MapPin, AlertCircle } from 'lucide-react';
 import { api } from '../context/AdminAuthContext';
+import Swal from 'sweetalert2';
 
 const ROLES = ['', 'CUSTOMER', 'BUSINESS_OWNER', 'ADMIN'];
 
 const UsersPage = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState(() => {
+    const cached = localStorage.getItem('cached_admin_users');
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(users.length === 0);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [selected, setSelected] = useState(null);
@@ -16,11 +20,14 @@ const UsersPage = () => {
   const PER_PAGE = 15;
 
   const fetchUsers = async () => {
-    setLoading(true);
+    if (users.length === 0) setLoading(true);
     try {
       const params = roleFilter ? `?role=${roleFilter}` : '';
       const r = await api.get(`/admin/users${params}`);
       setUsers(r.data);
+      if (!roleFilter) {
+        localStorage.setItem('cached_admin_users', JSON.stringify(r.data));
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -47,20 +54,70 @@ const UsersPage = () => {
     setActionLoading(true);
     try {
       const r = await api.patch(`/admin/users/${id}/status`);
-      setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: r.data.is_active } : u));
+      setUsers(prev => {
+        const next = prev.map(u => u.id === id ? { ...u, is_active: r.data.is_active } : u);
+        localStorage.setItem('cached_admin_users', JSON.stringify(next));
+        return next;
+      });
       if (selected?.user?.id === id) setSelected(s => ({ ...s, user: { ...s.user, is_active: r.data.is_active } }));
-    } catch (e) { alert(e.response?.data?.detail || 'Action failed'); }
+      Swal.fire({
+        icon: 'success',
+        title: 'Status Toggled',
+        text: `User is now ${r.data.is_active ? 'Active' : 'Inactive'}.`,
+        confirmButtonColor: '#FF7F50',
+      });
+    } catch (e) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Action Failed',
+        text: e.response?.data?.detail || 'Failed to toggle user status.',
+        confirmButtonColor: '#FF7F50',
+      });
+    }
     setActionLoading(false);
   };
 
   const deleteUser = async (id) => {
-    if (!confirm('Delete this user permanently?')) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Delete this user permanently?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    if (!result.isConfirmed) return;
+    
     setActionLoading(true);
     try {
       await api.delete(`/admin/users/${id}`);
+      
+      // Optimistic Update: Immediately remove from local state and cache
+      setUsers(prev => {
+        const next = prev.filter(u => u.id !== id);
+        localStorage.setItem('cached_admin_users', JSON.stringify(next));
+        return next;
+      });
       setDrawerOpen(false);
-      await fetchUsers();
-    } catch (e) { alert(e.response?.data?.detail || 'Failed'); }
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'The user has been deleted.',
+        confirmButtonColor: '#FF7F50',
+      });
+      
+      // Reload in the background
+      fetchUsers();
+    } catch (e) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
+        text: e.response?.data?.detail || 'Failed to delete the user.',
+        confirmButtonColor: '#FF7F50',
+      });
+    }
     setActionLoading(false);
   };
 
