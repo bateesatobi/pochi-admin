@@ -1,38 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Building2, Search, X, Eye, CheckCircle, XCircle, AlertCircle, Trash2, RefreshCw, BarChart3, TrendingUp, Package, Clock, ShieldAlert, Wallet } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../context/AdminAuthContext';
-import Swal from 'sweetalert2';
+import { useBusinesses } from '../hooks/queries';
+import { alertSuccess, alertError, confirmDelete } from '../utils/swal';
 
 const STATUS_OPTIONS = ['', 'BASIC_REGISTERED', 'KYC_SUBMITTED', 'APPROVED', 'REJECTED', 'SUSPENDED'];
 
 const Businesses = () => {
-  const [businesses, setBusinesses] = useState(() => {
-    const cached = localStorage.getItem('cached_admin_businesses');
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [loading, setLoading] = useState(businesses.length === 0);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const { data: businesses = [], isLoading: loading, refetch } = useBusinesses(statusFilter);
   const [selected, setSelected] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [page, setPage] = useState(1);
   const PER_PAGE = 12;
 
-  const fetch = async () => {
-    if (businesses.length === 0) setLoading(true);
-    try {
-      const params = statusFilter ? `?status=${statusFilter}` : '';
-      const r = await api.get(`/admin/businesses${params}`);
-      setBusinesses(r.data);
-      if (!statusFilter) {
-        localStorage.setItem('cached_admin_businesses', JSON.stringify(r.data));
-      }
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  useEffect(() => { fetch(); }, [statusFilter]);
+  const refreshBusinesses = () =>
+    queryClient.invalidateQueries({ queryKey: ['admin', 'businesses'] });
 
   const filtered = businesses.filter(b =>
     b.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -56,69 +43,33 @@ const Businesses = () => {
     setActionLoading(true);
     try {
       await api.patch(`/admin/businesses/${id}/status?new_status=${status}`);
-      localStorage.removeItem('cached_admin_businesses');
-      await fetch();
+      await refreshBusinesses();
       if (selected?.business?.id === id) {
         const r = await api.get(`/admin/businesses/${id}`);
         setSelected(r.data);
       }
-      Swal.fire({
-        icon: 'success',
-        title: 'Status Updated!',
-        text: `Business status successfully updated to ${status}.`,
-        confirmButtonColor: '#FF7F50',
-      });
+      alertSuccess('Status Updated', `Business status updated to ${status}.`);
     } catch (e) { 
-      Swal.fire({
-        icon: 'error',
-        title: 'Action Failed',
-        text: e.response?.data?.detail || 'Action failed',
-        confirmButtonColor: '#FF7F50',
-      });
+      alertError('Action Failed', e.response?.data?.detail || 'Action failed');
     }
     setActionLoading(false);
   };
 
   const deleteBiz = async (id) => {
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: "Delete this business permanently?",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!'
+    const result = await confirmDelete({
+      title: 'Delete business?',
+      text: 'This business profile will be permanently removed.',
     });
     if (!result.isConfirmed) return;
     
     setActionLoading(true);
     try {
       await api.delete(`/admin/businesses/${id}`);
-      
-      // Optimistic Update: Immediately remove from local state and cache
-      setBusinesses(prev => {
-        const next = prev.filter(b => b.id !== id);
-        localStorage.setItem('cached_admin_businesses', JSON.stringify(next));
-        return next;
-      });
       setDrawerOpen(false);
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'The business profile has been deleted.',
-        confirmButtonColor: '#FF7F50',
-      });
-      
-      // Reload in the background
-      fetch();
+      await refreshBusinesses();
+      alertSuccess('Deleted', 'The business profile has been deleted.');
     } catch (e) { 
-      Swal.fire({
-        icon: 'error',
-        title: 'Delete Failed',
-        text: e.response?.data?.detail || 'Delete failed',
-        confirmButtonColor: '#FF7F50',
-      });
+      alertError('Delete Failed', e.response?.data?.detail || 'Delete failed');
     }
     setActionLoading(false);
   };
@@ -133,7 +84,7 @@ const Businesses = () => {
           <h1>Business Management</h1>
           <p>Approve KYC submissions and oversee all registered merchants.</p>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={fetch}><RefreshCw size={14}/> Refresh</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => refetch()}><RefreshCw size={14}/> Refresh</button>
       </div>
 
       <div className="controls-bar">
@@ -296,13 +247,25 @@ const Businesses = () => {
               )}
 
               {/* KYC Docs preview */}
-              {(biz.logo_b64 || biz.license_b64) && (
+              {(biz.logo_b64 || biz.license_b64 || biz.refund_policy_b64) && (
                 <div className="detail-section">
                   <div className="detail-section-title">KYC Documents</div>
                   <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                     {biz.logo_b64 && <div><div style={{fontSize:10,fontWeight:700,color:'var(--text-subtle)',textTransform:'uppercase',marginBottom:6}}>Logo</div><img src={biz.logo_b64} alt="Logo" style={{width:80,height:80,objectFit:'cover',borderRadius:10,border:'1px solid var(--border)'}}/></div>}
                     {biz.license_b64 && <div><div style={{fontSize:10,fontWeight:700,color:'var(--text-subtle)',textTransform:'uppercase',marginBottom:6}}>License</div><img src={biz.license_b64} alt="License" style={{width:80,height:80,objectFit:'cover',borderRadius:10,border:'1px solid var(--border)'}}/></div>}
                     {biz.owner_id_front_b64 && <div><div style={{fontSize:10,fontWeight:700,color:'var(--text-subtle)',textTransform:'uppercase',marginBottom:6}}>ID Front</div><img src={biz.owner_id_front_b64} alt="ID" style={{width:80,height:80,objectFit:'cover',borderRadius:10,border:'1px solid var(--border)'}}/></div>}
+                    {biz.refund_policy_b64 && (
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:'var(--text-subtle)',textTransform:'uppercase',marginBottom:6}}>
+                          Refund Policy {biz.refund_policy_type === 'signed_template' ? '(Pochi template)' : '(Own)'}
+                        </div>
+                        {biz.refund_policy_b64.startsWith('data:image') ? (
+                          <img src={biz.refund_policy_b64} alt="Refund policy" style={{width:80,height:80,objectFit:'cover',borderRadius:10,border:'1px solid var(--border)'}}/>
+                        ) : (
+                          <a href={biz.refund_policy_b64} target="_blank" rel="noopener noreferrer" download style={{fontSize:12,fontWeight:600}}>View document</a>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

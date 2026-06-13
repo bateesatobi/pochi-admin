@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ShoppingCart, Search, Filter, Calendar, Eye, Download, RefreshCw, User, Building2, CreditCard, X } from 'lucide-react';
-import { api } from '../context/AdminAuthContext';
+import { useAdminOrders } from '../hooks/queries';
 
 const STATUS_OPTIONS = ['', 'PENDING', 'PAID', 'FULFILLED', 'CANCELLED'];
 
@@ -12,56 +12,19 @@ const formatImage = (b64) => {
 };
 
 const Orders = () => {
-  const [orders, setOrders] = useState(() => {
-    const cached = localStorage.getItem('cached_admin_orders');
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [loading, setLoading] = useState(orders.length === 0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const { data: orders = [], isLoading: loading, refetch } = useAdminOrders({
+    statusFilter,
+    startDate,
+    endDate,
+  });
   const [page, setPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const PER_PAGE = 12;
-
-  const fetchOrders = async () => {
-    if (orders.length === 0) setLoading(true);
-    try {
-      let url = `/admin/orders?status=${statusFilter}`;
-      if (startDate) url += `&start_date=${startDate}`;
-      if (endDate) url += `&end_date=${endDate}`;
-
-      const r = await api.get(url);
-      setOrders(r.data);
-      if (!statusFilter && !startDate && !endDate) {
-        localStorage.setItem('cached_admin_orders', JSON.stringify(r.data));
-      }
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchOrders(); }, [statusFilter, startDate, endDate]);
-
-  useEffect(() => {
-    const handleNewOrder = () => {
-      console.log("Real-time new order event received. Reloading...");
-      fetchOrders();
-    };
-    const handleStatusChanged = () => {
-      console.log("Real-time order status update event received. Reloading...");
-      fetchOrders();
-    };
-
-    window.addEventListener('poch-order-new', handleNewOrder);
-    window.addEventListener('poch-order-status-changed', handleStatusChanged);
-
-    return () => {
-      window.removeEventListener('poch-order-new', handleNewOrder);
-      window.removeEventListener('poch-order-status-changed', handleStatusChanged);
-    };
-  }, []);
 
   const filtered = orders.filter(o =>
     o.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -89,7 +52,7 @@ const Orders = () => {
           <h1>Order Oversight</h1>
           <p>Monitor all marketplace transactions and track fulfillment status.</p>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={fetchOrders}><RefreshCw size={14} /> Refresh</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => refetch()}><RefreshCw size={14} /> Refresh</button>
       </div>
 
       <div className="stat-grid">

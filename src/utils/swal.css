@@ -1,0 +1,225 @@
+/* Pochi Admin — SweetAlert2 theme */
+
+.poch-admin-swal-container {
+  font-family: 'Inter', sans-serif;
+}
+
+.poch-admin-swal-popup {
+  border-radius: 18px !important;
+  padding: 2rem 1.75rem 1.5rem !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow:
+    0 24px 48px rgba(15, 23, 42, 0.14),
+    0 8px 16px rgba(15, 23, 42, 0.06) !important;
+}
+
+.poch-admin-swal-title {
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+  color: #0b182a !important;
+  letter-spacing: -0.02em;
+  padding: 0 !important;
+}
+
+.poch-admin-swal-text {
+  font-size: 0.92rem !important;
+  line-height: 1.55 !important;
+  color: #64748b !important;
+  margin-top: 0.5rem !important;
+}
+
+.poch-admin-swal-icon {
+  margin: 0.75rem auto 1rem !important;
+  border-width: 3px !important;
+  transform: scale(0.92);
+}
+
+.poch-admin-swal-actions {
+  gap: 0.65rem !important;
+  margin-top: 1.5rem !important;
+  width: 100%;
+  justify-content: center !important;
+}
+
+.poch-admin-swal-btn {
+  border: none !important;
+  border-radius: 10px !important;
+  font-family: inherit !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  padding: 0.68rem 1.25rem !important;
+  min-width: 108px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.poch-admin-swal-btn:hover {
+  transform: translateY(-1px);
+}
+
+.poch-admin-swal-btn-confirm {
+  background: linear-gradient(135deg, #ff7e47 0%, #f97316 100%) !important;
+  color: #fff !important;
+}
+
+.poch-admin-swal-btn-confirm:hover {
+  box-shadow: 0 8px 20px rgba(255, 126, 71, 0.35);
+}
+
+.poch-admin-swal-btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: #fff !important;
+}
+
+.poch-admin-swal-btn-danger:hover {
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.poch-admin-swal-btn-cancel {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+}
+
+.poch-admin-swal-btn-cancel:hover {
+  background: #e2e8f0 !important;
+}
+
+.poch-admin-swal-input {
+  border-radius: 10px !important;
+  border: 1px solid #e2e8f0 !important;
+  font-family: inherit !important;
+  font-size: 0.92rem !important;
+  padding: 0.7rem 0.95rem !important;
+  margin-top: 0.75rem !important;
+}
+
+.poch-admin-swal-input:focus {
+  border-color: #ff7e47 !important;
+  box-shadow: 0 0 0 3px rgba(255, 126, 71, 0.15) !important;
+}
+
+.poch-admin-swal-validation {
+  font-size: 0.84rem !important;
+  color: #ef4444 !important;
+}
+
+.poch-admin-swal-timer {
+  background: rgba(255, 126, 71, 0.35) !important;
+}
+
+.poch-admin-swal-toast {
+  border-radius: 14px !important;
+  padding: 0.85rem 1rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.28) !important;
+}
+
+.poch-admin-swal-toast-title {
+  font-size: 0.93rem !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+}
+
+.poch-admin-swal-toast-text {
+  font-size: 0.8rem !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+  margin-top: 0.15rem !important;
+}
+
+.poch-admin-swal-toast-timer {
+  background: rgba(255, 126, 71, 0.55) !important;
+}
+
+.poch-admin-swal-animate-in {
+  animation: pochAdminSwalIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.poch-admin-swal-animate-out {
+  animation: pochAdminSwalOut 0.18s ease-in forwards;
+}
+
+@keyframes pochAdminSwalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes pochAdminSwalOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.poch-disburse-review {
+  text-align: left;
+}
+
+.poch-disburse-lead {
+  margin: 0 0 12px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.poch-disburse-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.poch-disburse-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.poch-disburse-row strong {
+  color: #0b182a;
+  font-weight: 800;
+}
+
+.poch-disburse-row .text-danger { color: #ef4444 !important; }
+.poch-disburse-row .text-muted { color: #64748b !important; }
+.poch-disburse-row .text-success { color: #16a34a !important; font-size: 1rem; }
+
+.poch-disburse-total span,
+.poch-disburse-total strong {
+  font-size: 0.92rem;
+}
+
+.poch-disburse-card hr {
+  margin: 4px 0;
+  border: none;
+  border-top: 1px solid #e2e8f0;
+}
+
+.poch-disburse-notice {
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 14px;
+  font-size: 0.8rem;
+  color: #9a3412;
+  line-height: 1.45;
+}

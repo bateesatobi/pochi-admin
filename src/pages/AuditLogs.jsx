@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   ScrollText, Search, Filter, Calendar, ShieldAlert, Activity, FileText,
   CheckCircle, AlertTriangle, Trash2, UserPlus, RefreshCw, X, Eye, 
   ChevronRight, SlidersHorizontal, Info, Clock, User
 } from 'lucide-react';
-import { api } from '../context/AdminAuthContext';
+import { useAuditLogs } from '../hooks/queries';
 
 const ACTION_COLORS = {
   APPROVE: { bg: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.3)', text: '#10B981', icon: CheckCircle },
@@ -23,11 +23,7 @@ const getActionStyle = (action) => {
 };
 
 const AuditLogs = () => {
-  const [logs, setLogs] = useState(() => {
-    const cached = localStorage.getItem('cached_admin_audit_logs');
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [loading, setLoading] = useState(logs.length === 0);
+  const { data: logs = [], isLoading: loading, refetch } = useAuditLogs();
   const [search, setSearch] = useState('');
   const [entityFilter, setEntityFilter] = useState('');
   const [actionTypeFilter, setActionTypeFilter] = useState('');
@@ -35,22 +31,6 @@ const AuditLogs = () => {
   const [selectedLog, setSelectedLog] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const PER_PAGE = 15;
-
-  const fetchLogs = async () => {
-    try {
-      const r = await api.get('/admin/audit-logs?limit=200');
-      setLogs(r.data);
-      setLoading(false);
-      localStorage.setItem('cached_admin_audit_logs', JSON.stringify(r.data));
-    } catch (err) {
-      console.error('Failed to fetch audit logs:', err);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchLogs();
-  }, []);
 
   const filtered = logs.filter(l =>
     l.action?.toLowerCase().includes(search.toLowerCase()) ||
@@ -87,7 +67,7 @@ const AuditLogs = () => {
           </h1>
           <p>Read-only ledger tracking admin operations, configuration modifications, and system-moderated actions.</p>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={fetchLogs}>
+        <button className="btn btn-ghost btn-sm" onClick={() => refetch()}>
           <RefreshCw size={14} /> Refresh Logs
         </button>
       </div>

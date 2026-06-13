@@ -4,9 +4,16 @@ import {
   XCircle, Clock, Building2, Smartphone, AlertTriangle, Send,
   DollarSign, TrendingUp, Activity
 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useQueryClient } from '@tanstack/react-query';
+import { alertSuccess, alertError, alertWarning, fire } from '../utils/swal';
 import './Payments.css';
 import { api } from '../context/AdminAuthContext';
+import {
+  usePendingDisbursements,
+  useAdminPayTransactions,
+  useAdminDisbursements,
+  usePlatformSettings,
+} from '../hooks/queries';
 
 const fmt = (n) => `UGX ${Number(n || 0).toLocaleString('en-UG', { minimumFractionDigits: 0 })}`;
 const fmtDate = (d) => new Date(d).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -19,92 +26,50 @@ const STATUS_CONFIG = {
 };
 
 const AdminPayments = () => {
-  const [tab, setTab]                   = useState('pending');
-  const [pendingDis, setPendingDis]     = useState(() => {
-    const cached = localStorage.getItem('cached_admin_pending_disbursements');
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [transactions, setTxs]          = useState(() => {
-    const cached = localStorage.getItem('cached_admin_pay_transactions');
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [disbursements, setDisbursements] = useState(() => {
-    const cached = localStorage.getItem('cached_admin_disbursements');
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [loading, setLoading]           = useState(
-    pendingDis.length === 0 && transactions.length === 0 && disbursements.length === 0
-  );
+  const queryClient = useQueryClient();
+  const { data: pendingDis = [], isLoading: pendingLoading } = usePendingDisbursements();
+  const { data: transactions = [], isLoading: txLoading } = useAdminPayTransactions();
+  const { data: disbursements = [], isLoading: disLoading } = useAdminDisbursements();
+  const { data: platformSettings } = usePlatformSettings();
+  const platformFeePct = platformSettings?.default_platform_fee_pct ?? 5;
+
+  const [tab, setTab] = useState('pending');
   const [disbursingId, setDisbursingId] = useState(null);
+  const loading = pendingLoading && txLoading && disLoading && !pendingDis.length;
 
-  const load = async () => {
-    if (pendingDis.length === 0 && transactions.length === 0 && disbursements.length === 0) setLoading(true);
-    try {
-      const [pendRes, txRes, disRes] = await Promise.all([
-        api.get('/admin/payments/pending-disbursements'),
-        api.get('/admin/payments/transactions'),
-        api.get('/admin/payments/disbursements'),
-      ]);
-      setPendingDis(pendRes.data || []);
-      setTxs(txRes.data || []);
-      setDisbursements(disRes.data || []);
-      localStorage.setItem('cached_admin_pending_disbursements', JSON.stringify(pendRes.data || []));
-      localStorage.setItem('cached_admin_pay_transactions', JSON.stringify(txRes.data || []));
-      localStorage.setItem('cached_admin_disbursements', JSON.stringify(disRes.data || []));
-    } catch (err) {
-      console.error('Failed to load admin payments:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
-
-  useEffect(() => {
-    const handleDisbCompleted = () => {
-      console.log("Real-time disbursement event received. Reloading payments data...");
-      load();
-    };
-    window.addEventListener('poch-disbursement-completed', handleDisbCompleted);
-    return () => {
-      window.removeEventListener('poch-disbursement-completed', handleDisbCompleted);
-    };
-  }, []);
+  const refreshPayments = () =>
+    queryClient.invalidateQueries({ queryKey: ['admin', 'payments'] });
 
   const handleDisburse = async (business) => {
     if (!business.payout_account) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'No Payout Account',
-        text: `${business.business_name} has not configured a mobile money payout account. Ask them to set it up in their Business Portal → Payments.`,
-        background: '#fff',
-        color: '#0b182a',
-      });
+      alertWarning(
+        'No Payout Account',
+        `${business.business_name} has not configured a mobile money payout account. Ask them to set it up in Business Portal → Payments.`
+      );
       return;
     }
 
-    const { isConfirmed, value: notes } = await Swal.fire({
+    const { isConfirmed, value: notes } = await fire({
       title: `Disburse to ${business.business_name}`,
       html: `
-        <div style="text-align:left;font-family:inherit">
-          <p style="margin:0 0 12px;color:#64748b;font-size:13px">Review before disbursing:</p>
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-            <div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#64748b;font-weight:700">Gross Collected</span><span style="font-weight:800;color:#0b182a">${fmt(business.total_collected)}</span></div>
-            <div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#64748b;font-weight:700">Platform Fee (5%)</span><span style="font-weight:700;color:#ef4444">-${fmt(business.platform_fee)}</span></div>
-            <div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#64748b;font-weight:700">Already Disbursed</span><span style="font-weight:700;color:#64748b">-${fmt(business.total_disbursed)}</span></div>
-            <hr style="margin:4px 0;border:none;border-top:1px solid #e2e8f0"/>
-            <div style="display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:800;color:#0b182a">Net To Disburse</span><span style="font-weight:800;font-size:16px;color:#16a34a">${fmt(business.pending_balance)}</span></div>
+        <div class="poch-disburse-review">
+          <p class="poch-disburse-lead">Review before disbursing:</p>
+          <div class="poch-disburse-card">
+            <div class="poch-disburse-row"><span>Gross Collected</span><strong>${fmt(business.total_collected)}</strong></div>
+            <div class="poch-disburse-row"><span>Platform Fee (${platformFeePct}%)</span><strong class="text-danger">-${fmt(business.platform_fee)}</strong></div>
+            <div class="poch-disburse-row"><span>Already Disbursed</span><strong class="text-muted">-${fmt(business.total_disbursed)}</strong></div>
+            <hr />
+            <div class="poch-disburse-row poch-disburse-total"><span>Net To Disburse</span><strong class="text-success">${fmt(business.pending_balance)}</strong></div>
           </div>
-          <div style="background:#fff7ed;border:1px solid #ffedd5;border-radius:10px;padding:12px;margin-bottom:16px">
-            <p style="margin:0;font-size:12px;color:#9a3412"><strong>📱 Sending to:</strong> ${business.payout_account?.account_name} — ${business.payout_account?.phone_number} (${business.payout_account?.provider})</p>
+          <div class="poch-disburse-notice">
+            <strong>Sending to:</strong> ${business.payout_account?.account_name} — ${business.payout_account?.phone_number} (${business.payout_account?.provider})
           </div>
-          <input id="swal-notes" placeholder="Optional notes (e.g. May 2026 payout)" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box" />
+          <input id="swal-notes" class="poch-swal-input" placeholder="Optional notes (e.g. May 2026 payout)" />
         </div>
       `,
       showCancelButton: true,
       confirmButtonText: 'Disburse via YO! Payments',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#FF7F50',
       focusConfirm: false,
       preConfirm: () => document.getElementById('swal-notes')?.value || '',
     });
@@ -120,27 +85,18 @@ const AdminPayments = () => {
       );
 
       if (res.data.success) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Disbursement Successful! 🎉',
-          html: `
-            <p style="font-size:14px;color:#64748b;margin:0 0 8px">Successfully sent <strong style="color:#16a34a">${fmt(res.data.amount_disbursed)}</strong> to ${business.business_name}</p>
-            <p style="font-size:12px;color:#64748b;margin:0">YO! Reference: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">${res.data.yo_transaction_id || 'N/A'}</code></p>
-          `,
-          timer: 4000,
-          showConfirmButton: false,
-          timerProgressBar: true,
-        });
-        localStorage.removeItem('cached_admin_pending_disbursements');
-        localStorage.removeItem('cached_admin_pay_transactions');
-        localStorage.removeItem('cached_admin_disbursements');
-        load();
+        alertSuccess(
+          'Disbursement Successful',
+          `Sent ${fmt(res.data.amount_disbursed)} to ${business.business_name}. Reference: ${res.data.yo_transaction_id || 'N/A'}`,
+          { timer: 4000 }
+        );
+        refreshPayments();
       } else {
-        Swal.fire({ icon: 'error', title: 'Disbursement Failed', text: res.data.message });
+        alertError('Disbursement Failed', res.data.message);
       }
     } catch (err) {
       const msg = err.response?.data?.detail || 'Disbursement failed. Please try again.';
-      Swal.fire({ icon: 'error', title: 'Error', text: msg });
+      alertError('Error', msg);
     } finally {
       setDisbursingId(null);
     }
@@ -148,7 +104,7 @@ const AdminPayments = () => {
 
   // KPI totals
   const totalCollected = transactions.reduce((s, t) => t.status === 'COMPLETED' ? s + t.amount : s, 0);
-  const totalFee = totalCollected * 0.05;
+  const totalFee = totalCollected * (platformFeePct / 100);
   const totalDisbursed = disbursements.reduce((s, d) => d.status === 'COMPLETED' ? s + d.net_amount : s, 0);
   const pendingTotal = pendingDis.reduce((s, b) => s + b.pending_balance, 0);
 
@@ -160,7 +116,7 @@ const AdminPayments = () => {
           <h1 className="ap-title">Payments & Disbursements</h1>
           <p className="ap-subtitle">Manage platform collections, track transactions, and disburse earnings to businesses.</p>
         </div>
-        <button className="ap-btn-refresh" onClick={load} disabled={loading}>
+        <button className="ap-btn-refresh" onClick={refreshPayments} disabled={loading}>
           {loading ? <Loader2 size={16} className="spin" /> : <RefreshCw size={16} />}
           Refresh
         </button>
@@ -178,7 +134,7 @@ const AdminPayments = () => {
         <div className="ap-kpi">
           <div className="ap-kpi-icon ap-kpi-fee"><DollarSign size={20} /></div>
           <div>
-            <div className="ap-kpi-label">Platform Revenue (5%)</div>
+            <div className="ap-kpi-label">Platform Revenue ({platformFeePct}%)</div>
             <div className="ap-kpi-value">{fmt(totalFee)}</div>
           </div>
         </div>

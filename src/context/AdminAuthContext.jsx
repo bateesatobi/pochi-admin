@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE } from '../config/api';
+import { queryClient } from '../lib/queryClient';
 
 const AdminAuthContext = createContext(null);
 
@@ -22,7 +24,7 @@ export const AdminAuthProvider = ({ children }) => {
     form.append('password', password);
 
     const res = await axios.post(
-      'https://pakacha.com/api/v1/auth/admin/login',
+      `${API_BASE}/auth/admin/login`,
       form,
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
@@ -31,7 +33,7 @@ export const AdminAuthProvider = ({ children }) => {
     localStorage.setItem('admin_token', token);
 
     // Fetch profile
-    const me = await axios.get('https://pakacha.com/api/v1/auth/me', {
+    const me = await axios.get(`${API_BASE}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     localStorage.setItem('admin_user', JSON.stringify(me.data));
@@ -42,6 +44,7 @@ export const AdminAuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
+    queryClient.clear();
     setAdmin(null);
   };
 
@@ -56,14 +59,7 @@ export const useAdminAuth = () => useContext(AdminAuthContext);
 
 export const getToken = () => localStorage.getItem('admin_token');
 
-const getBaseURL = () => {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'https://pakacha.com/api/v1';
-  }
-  return 'https://pakacha.com/api/v1';
-};
-
-export const api = axios.create({ baseURL: getBaseURL() });
+export const api = axios.create({ baseURL: API_BASE });
 
 api.interceptors.request.use(config => {
   const token = getToken();

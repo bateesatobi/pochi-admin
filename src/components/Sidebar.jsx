@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, Package, ShoppingCart,
-  ScrollText, Settings, LogOut, ShieldCheck, CreditCard
+  ScrollText, Settings, LogOut, ShieldCheck, CreditCard, Layers, Percent, Tag
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
@@ -15,11 +15,14 @@ const MAIN_NAV = [
   { to: '/businesses', icon: Building2, label: 'Businesses' },
   { to: '/users', icon: Users, label: 'Users & Customers' },
   { to: '/products', icon: Package, label: 'Products' },
+  { to: '/categories', icon: Layers, label: 'Categories' },
+  { to: '/promotions', icon: Tag, label: 'Promotions' },
   { to: '/orders', icon: ShoppingCart, label: 'Orders' },
   { to: '/payments', icon: CreditCard, label: 'Payments' },
 ];
 
 const SYSTEM_NAV = [
+  { to: '/platform-settings', icon: Percent, label: 'Platform Fee' },
   { to: '/audit-logs', icon: ScrollText, label: 'Audit Logs' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];

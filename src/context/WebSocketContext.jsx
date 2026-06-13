@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { WS_BASE } from '../config/api';
 
 const WebSocketContext = createContext(null);
 
@@ -27,9 +28,7 @@ export const WebSocketProvider = ({ children, token }) => {
       return;
     }
 
-    const protocol = 'wss';
-    const host = 'pakacha.com';
-    const wsUrl = `${protocol}://${host}/ws?token=${token}`;
+    const wsUrl = `${WS_BASE}/ws?token=${token}`;
 
     console.log(`📡 Connecting WebSocket to: ${wsUrl}`);
     const ws = new WebSocket(wsUrl);

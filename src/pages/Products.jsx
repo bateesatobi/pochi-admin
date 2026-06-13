@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   Package, Search, X, ToggleLeft, ToggleRight, Trash2, Building2, 
   Layers, Archive, Activity, Eye, ChevronLeft, ChevronRight, MapPin 
 } from 'lucide-react';
 import { api } from '../context/AdminAuthContext';
-import Swal from 'sweetalert2';
+import { useAdminProducts } from '../hooks/queries';
+import { alertSuccess, alertError, confirmDelete } from '../utils/swal';
 
 // Helper to ensure base64 has data URI prefix
 const formatImage = (b64) => {
@@ -14,11 +16,8 @@ const formatImage = (b64) => {
 };
 
 const Products = () => {
-  const [products, setProducts] = useState(() => {
-    const cached = localStorage.getItem('cached_admin_products');
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [loading, setLoading] = useState(products.length === 0);
+  const queryClient = useQueryClient();
+  const { data: products = [], isLoading: loading, refetch } = useAdminProducts();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -27,17 +26,8 @@ const Products = () => {
   const [page, setPage] = useState(1);
   const PER_PAGE = 15;
 
-  const fetchProducts = async () => {
-    if (products.length === 0) setLoading(true);
-    try { 
-      const r = await api.get('/admin/products'); 
-      setProducts(r.data); 
-      localStorage.setItem('cached_admin_products', JSON.stringify(r.data));
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchProducts(); }, []);
+  const refreshProducts = () =>
+    queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
 
   const filtered = products.filter(p =>
     p.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -52,7 +42,7 @@ const Products = () => {
     setActiveImgIndex(0);
     setSelected({ product: p, images: [], inventory: null, business: null, category: null });
     try {
-      const r = await api.get(`/admin/products/${p.sku}`);
+      const r = await api.get(`/admin/products/${p.sku}`, { params: { viewer_currency: 'UGX' } });
       setSelected(r.data);
     } catch (e) { console.error(e); }
   };
@@ -61,69 +51,30 @@ const Products = () => {
     setActionLoading(true);
     try {
       const r = await api.patch(`/admin/products/${sku}/status`);
-      setProducts(prev => {
-        const next = prev.map(p => p.sku === sku ? { ...p, is_active: r.data.is_active } : p);
-        localStorage.setItem('cached_admin_products', JSON.stringify(next));
-        return next;
-      });
+      await refreshProducts();
       if (selected?.product?.sku === sku) setSelected(s => ({ ...s, product: { ...s.product, is_active: r.data.is_active } }));
-      Swal.fire({
-        icon: 'success',
-        title: 'Status Toggled',
-        text: `Product status is now ${r.data.is_active ? 'Active' : 'Inactive'}.`,
-        confirmButtonColor: '#FF7F50',
-      });
+      alertSuccess('Status Updated', `Product status is now ${r.data.is_active ? 'Active' : 'Inactive'}.`);
     } catch (e) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Action Failed',
-        text: e.response?.data?.detail || 'Failed to toggle product status.',
-        confirmButtonColor: '#FF7F50',
-      });
+      alertError('Action Failed', e.response?.data?.detail || 'Failed to toggle product status.');
     }
     setActionLoading(false);
   };
 
   const deleteProduct = async (sku) => {
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: "Delete this product permanently?",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!'
+    const result = await confirmDelete({
+      title: 'Delete product?',
+      text: 'This product listing will be permanently removed.',
     });
     if (!result.isConfirmed) return;
 
     setActionLoading(true);
     try { 
       await api.delete(`/admin/products/${sku}`); 
-      
-      // Optimistic Update: Immediately remove from local state and cache
-      setProducts(prev => {
-        const next = prev.filter(p => p.sku !== sku);
-        localStorage.setItem('cached_admin_products', JSON.stringify(next));
-        return next;
-      });
       setDrawerOpen(false); 
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'The product listing has been deleted.',
-        confirmButtonColor: '#FF7F50',
-      });
-      
-      // Reload in the background
-      fetchProducts(); 
+      await refreshProducts();
+      alertSuccess('Deleted', 'The product listing has been deleted.');
     } catch (e) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Delete Failed',
-        text: e.response?.data?.detail || 'Failed to delete the product listing.',
-        confirmButtonColor: '#FF7F50',
-      });
+      alertError('Delete Failed', e.response?.data?.detail || 'Failed to delete the product listing.');
     }
     setActionLoading(false);
   };
@@ -152,8 +103,8 @@ const Products = () => {
               <th>Image</th>
               <th>SKU / Name</th>
               <th>Business</th>
-              <th>Base Price</th>
-              <th>Fee %</th>
+              <th>USD List</th>
+              <th>Local (UGX)</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -190,8 +141,17 @@ const Products = () => {
                     <span style={{ fontSize:13, fontWeight:600 }}>{p.business_name}</span>
                   </div>
                 </td>
-                <td>{(p.base_price||0).toLocaleString()}</td>
-                <td>{p.platform_fee}%</td>
+                <td>
+                  <div style={{ fontWeight: 700 }}>US${Number(p.listing_price || 0).toFixed(2)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-subtle)' }}>base US${Number(p.base_price || 0).toFixed(2)}</div>
+                </td>
+                <td>
+                  {p.display_listing_price != null ? (
+                    <div style={{ fontWeight: 600 }}>{Math.round(p.display_listing_price).toLocaleString()} {p.display_currency || ''}</div>
+                  ) : (
+                    <span style={{ color: 'var(--text-subtle)', fontSize: 12 }}>—</span>
+                  )}
+                </td>
                 <td><span className={`badge ${p.is_active?'badge-active':'badge-inactive'}`}>{p.is_active?'Active':'Inactive'}</span></td>
                 <td>
                   <div style={{display:'flex',gap:6}}>
@@ -307,11 +267,16 @@ const Products = () => {
                 <div className="detail-grid">
                   <div className="detail-item"><label>Product Name</label><span>{prod.name}</span></div>
                   <div className="detail-item"><label>SKU Identification</label><span style={{fontFamily:'monospace',fontSize:12, letterSpacing:0.5}}>{prod.sku}</span></div>
-                  <div className="detail-item"><label>Listing Price</label><span style={{fontSize:16, fontWeight:800}}>{(prod.base_price||0).toLocaleString()}</span></div>
-                  <div className="detail-item"><label>System Fee</label><span style={{color:'var(--primary)'}}>{prod.platform_fee}% Comm.</span></div>
+                  <div className="detail-item"><label>Base Price (USD)</label><span>US${Number(prod.base_price || 0).toFixed(2)}</span></div>
+                  <div className="detail-item"><label>Listing Price (USD)</label><span style={{ fontSize: 16, fontWeight: 800 }}>US${Number(prod.listing_price || 0).toFixed(2)}</span></div>
+                  {prod.display_listing_price != null && (
+                    <div className="detail-item"><label>Buyer Price (UGX)</label><span style={{ fontWeight: 700 }}>{Math.round(prod.display_listing_price).toLocaleString()} {prod.display_currency}</span></div>
+                  )}
+                  <div className="detail-item"><label>System Fee</label><span style={{ color: 'var(--primary)' }}>{prod.platform_fee}%</span></div>
+                  <div className="detail-item"><label>VAT</label><span>{prod.vat}%</span></div>
                   <div className="detail-item">
-                    <label><Layers size={10} style={{marginRight:4}}/> Marketplace Category</label>
-                    <span style={{ fontWeight:700 }}>{selected.category?.name || 'Uncategorized'}</span>
+                    <label><Layers size={10} style={{ marginRight: 4 }} /> Marketplace Category</label>
+                    <span style={{ fontWeight: 700 }}>{prod.category_name || 'Uncategorized'}</span>
                   </div>
                   <div className="detail-item">
                     <label><Archive size={10} style={{marginRight:4}}/> Inventory Status</label>

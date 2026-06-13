@@ -10,10 +10,14 @@ import Products from './pages/Products';
 import Orders from './pages/Orders';
 import AuditLogs from './pages/AuditLogs';
 import Settings from './pages/Settings';
+import PlatformSettings from './pages/PlatformSettings';
+import Categories from './pages/Categories';
+import Promotions from './pages/Promotions';
 import AdminPayments from './pages/Payments';
 import AdminNotifications from './components/AdminNotifications';
+import CacheSync from './components/CacheSync';
 
-import Swal from 'sweetalert2';
+import { toast } from './utils/swal';
 import { WebSocketProvider, useWebSocket } from './context/WebSocketContext';
 import { useEffect } from 'react';
 
@@ -23,35 +27,13 @@ const WebSocketListener = () => {
   useEffect(() => {
     // 1. Listen for new orders
     const unsubNewOrder = subscribe('ORDER_NEW', (order) => {
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'info',
-        title: `🛒 New Order Placed!`,
-        text: `Order #${order.order_id.slice(0, 8)} totaling UGX ${Number(order.total).toLocaleString()} was received.`,
-        showConfirmButton: false,
-        timer: 5000,
-        timerProgressBar: true,
-        background: '#0b182a',
-        color: '#fff',
-      });
+      toast('New Order Placed', `Order #${order.order_id.slice(0, 8)} — UGX ${Number(order.total).toLocaleString()}`, { icon: 'info', timer: 5000 });
       window.dispatchEvent(new CustomEvent('poch-order-new', { detail: order }));
     });
 
     // 2. Listen for disbursements
     const unsubDisb = subscribe('DISBURSEMENT_COMPLETED', (disb) => {
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: `💰 Payout Processed!`,
-        text: `Disbursed UGX ${Number(disb.amount).toLocaleString()} to ${disb.business_name}.`,
-        showConfirmButton: false,
-        timer: 5000,
-        timerProgressBar: true,
-        background: '#0b182a',
-        color: '#fff',
-      });
+      toast('Payout Processed', `UGX ${Number(disb.amount).toLocaleString()} to ${disb.business_name}`, { timer: 5000 });
       window.dispatchEvent(new CustomEvent('poch-disbursement-completed', { detail: disb }));
     });
 
@@ -89,6 +71,9 @@ const ProtectedLayout = () => {
     '/products': 'Product Moderation',
     '/orders': 'Order Oversight',
     '/payments': 'Payments & Disbursements',
+    '/categories': 'Categories',
+    '/promotions': 'Promotions',
+    '/platform-settings': 'Platform Settings',
     '/audit-logs': 'Audit Logs',
     '/settings': 'System Settings',
   };
@@ -97,6 +82,7 @@ const ProtectedLayout = () => {
   return (
     <div className="admin-layout">
       <WebSocketListener />
+      <CacheSync />
       <Sidebar />
       <div className="admin-main">
         <header className="topbar">
@@ -144,6 +130,9 @@ function App() {
               <Route path="/products" element={<Products />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/payments" element={<AdminPayments />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/promotions" element={<Promotions />} />
+              <Route path="/platform-settings" element={<PlatformSettings />} />
               <Route path="/audit-logs" element={<AuditLogs />} />
               <Route path="/settings" element={<Settings />} />
             </Route>

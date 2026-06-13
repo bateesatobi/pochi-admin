@@ -1,35 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Bell, CheckCircle2, Clock, X, Loader2 } from 'lucide-react';
-import axios from 'axios';
 import './AdminNotifications.css';
-
-const BASE = 'https://pakacha.com/api/v1/admin/notifications';
+import { api } from '../context/AdminAuthContext';
+import { useAdminNotifications } from '../hooks/queries';
+import { queryKeys } from '../lib/queryKeys';
 
 const AdminNotifications = () => {
-  const [notifications, setNotifications] = useState([]);
+  const queryClient = useQueryClient();
+  const { data: notifications = [], refetch } = useAdminNotifications({
+    refetchInterval: 30_000,
+  });
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
-  
-  const token = localStorage.getItem('adminToken');
-  const headers = { Authorization: `Bearer ${token}` };
-
-  const loadNotifications = async () => {
-    try {
-      const res = await axios.get(BASE, { headers });
-      setNotifications(res.data || []);
-    } catch (err) {
-      console.error('Failed to load notifications:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (token) {
-      loadNotifications();
-      const interval = setInterval(loadNotifications, 30000); // Polling every 30s
-      return () => clearInterval(interval);
-    }
-  }, [token]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -43,11 +27,17 @@ const AdminNotifications = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  const updateNotifications = (updater) => {
+    queryClient.setQueryData(queryKeys.notifications, (current = []) => updater(current));
+  };
+
   const markAsRead = async (id, e) => {
     if (e) e.stopPropagation();
     try {
-      await axios.patch(`${BASE}/${id}/read`, {}, { headers });
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      await api.patch(`/admin/notifications/${id}/read`);
+      updateNotifications((items) =>
+        items.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      );
     } catch (err) {
       console.error('Failed to mark read', err);
     }
@@ -56,8 +46,8 @@ const AdminNotifications = () => {
   const markAllAsRead = async () => {
     setLoading(true);
     try {
-      await axios.post(`${BASE}/read-all`, {}, { headers });
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      await api.post('/admin/notifications/read-all');
+      updateNotifications((items) => items.map((n) => ({ ...n, is_read: true })));
     } catch (err) {
       console.error('Failed to mark all read', err);
     } finally {
@@ -65,7 +55,7 @@ const AdminNotifications = () => {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <div className="admin-notif-container" ref={dropdownRef}>
@@ -77,39 +67,32 @@ const AdminNotifications = () => {
       {isOpen && (
         <div className="admin-notif-dropdown">
           <div className="notif-header">
-            <h3>Notifications</h3>
+            <h4>Notifications</h4>
             {unreadCount > 0 && (
-              <button onClick={markAllAsRead} disabled={loading} className="btn-read-all">
-                {loading ? <Loader2 size={12} className="spin" /> : <CheckCircle2 size={12} />}
-                Mark all read
+              <button className="mark-all-btn" onClick={markAllAsRead} disabled={loading}>
+                {loading ? <Loader2 size={14} className="spin" /> : 'Mark all read'}
               </button>
             )}
           </div>
-          
-          <div className="notif-body">
+          <div className="notif-list">
             {notifications.length === 0 ? (
-              <div className="notif-empty">
-                <Bell size={32} opacity={0.2} />
-                <p>No notifications yet</p>
-              </div>
+              <p className="notif-empty">No notifications</p>
             ) : (
-              notifications.map(n => (
-                <div key={n.id} className={`notif-item ${!n.is_read ? 'unread' : ''}`}>
-                  <div className="notif-content">
-                    <div className="notif-title">{n.title}</div>
-                    <div className="notif-message">{n.message}</div>
-                    <div className="notif-time">
-                      <Clock size={10} />
-                      {new Date(n.created_at).toLocaleString('en-UG', { 
-                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-                      })}
-                    </div>
+              notifications.slice(0, 20).map((n) => (
+                <div
+                  key={n.id}
+                  className={`notif-item ${n.is_read ? 'read' : 'unread'}`}
+                  onClick={() => !n.is_read && markAsRead(n.id)}
+                >
+                  <div className="notif-item-content">
+                    <strong>{n.title}</strong>
+                    <p>{n.message}</p>
+                    <span className="notif-time">
+                      <Clock size={12} />
+                      {new Date(n.created_at).toLocaleString()}
+                    </span>
                   </div>
-                  {!n.is_read && (
-                    <button className="btn-mark-read" onClick={(e) => markAsRead(n.id, e)} title="Mark as read">
-                      <div className="unread-dot"></div>
-                    </button>
-                  )}
+                  {n.is_read && <CheckCircle2 size={14} className="read-icon" />}
                 </div>
               ))
             )}

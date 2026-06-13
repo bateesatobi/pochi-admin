@@ -1,38 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Users, Search, X, Eye, UserCheck, UserX, Trash2, ShoppingBag, CreditCard, Building2, MapPin, AlertCircle } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../context/AdminAuthContext';
-import Swal from 'sweetalert2';
+import { useUsers } from '../hooks/queries';
+import { alertSuccess, alertError, confirmDelete } from '../utils/swal';
 
 const ROLES = ['', 'CUSTOMER', 'BUSINESS_OWNER', 'ADMIN'];
 
 const UsersPage = () => {
-  const [users, setUsers] = useState(() => {
-    const cached = localStorage.getItem('cached_admin_users');
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [loading, setLoading] = useState(users.length === 0);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const { data: users = [], isLoading: loading } = useUsers(roleFilter);
   const [selected, setSelected] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [page, setPage] = useState(1);
   const PER_PAGE = 15;
 
-  const fetchUsers = async () => {
-    if (users.length === 0) setLoading(true);
-    try {
-      const params = roleFilter ? `?role=${roleFilter}` : '';
-      const r = await api.get(`/admin/users${params}`);
-      setUsers(r.data);
-      if (!roleFilter) {
-        localStorage.setItem('cached_admin_users', JSON.stringify(r.data));
-      }
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchUsers(); }, [roleFilter]);
+  const refreshUsers = () =>
+    queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
 
   const filtered = users.filter(u =>
     u.email?.toLowerCase().includes(search.toLowerCase()) ||
@@ -54,69 +41,30 @@ const UsersPage = () => {
     setActionLoading(true);
     try {
       const r = await api.patch(`/admin/users/${id}/status`);
-      setUsers(prev => {
-        const next = prev.map(u => u.id === id ? { ...u, is_active: r.data.is_active } : u);
-        localStorage.setItem('cached_admin_users', JSON.stringify(next));
-        return next;
-      });
+      await refreshUsers();
       if (selected?.user?.id === id) setSelected(s => ({ ...s, user: { ...s.user, is_active: r.data.is_active } }));
-      Swal.fire({
-        icon: 'success',
-        title: 'Status Toggled',
-        text: `User is now ${r.data.is_active ? 'Active' : 'Inactive'}.`,
-        confirmButtonColor: '#FF7F50',
-      });
+      alertSuccess('Status Updated', `User is now ${r.data.is_active ? 'Active' : 'Inactive'}.`);
     } catch (e) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Action Failed',
-        text: e.response?.data?.detail || 'Failed to toggle user status.',
-        confirmButtonColor: '#FF7F50',
-      });
+      alertError('Action Failed', e.response?.data?.detail || 'Failed to toggle user status.');
     }
     setActionLoading(false);
   };
 
   const deleteUser = async (id) => {
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: "Delete this user permanently?",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!'
+    const result = await confirmDelete({
+      title: 'Delete user?',
+      text: 'This user account will be permanently removed.',
     });
     if (!result.isConfirmed) return;
     
     setActionLoading(true);
     try {
       await api.delete(`/admin/users/${id}`);
-      
-      // Optimistic Update: Immediately remove from local state and cache
-      setUsers(prev => {
-        const next = prev.filter(u => u.id !== id);
-        localStorage.setItem('cached_admin_users', JSON.stringify(next));
-        return next;
-      });
       setDrawerOpen(false);
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'The user has been deleted.',
-        confirmButtonColor: '#FF7F50',
-      });
-      
-      // Reload in the background
-      fetchUsers();
+      await refreshUsers();
+      alertSuccess('Deleted', 'The user has been deleted.');
     } catch (e) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Delete Failed',
-        text: e.response?.data?.detail || 'Failed to delete the user.',
-        confirmButtonColor: '#FF7F50',
-      });
+      alertError('Delete Failed', e.response?.data?.detail || 'Failed to delete the user.');
     }
     setActionLoading(false);
   };
