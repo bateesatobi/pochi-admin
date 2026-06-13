@@ -92,15 +92,15 @@ const Dashboard = () => {
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#4F46E5" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#ff7e47" stopOpacity={0.25}/>
+                  <stop offset="95%" stopColor="#ff7e47" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="name" stroke="#64748B" fontSize={12} />
-              <YAxis stroke="#64748B" fontSize={12} tickFormatter={(v) => `${(v/1000000).toFixed(1)}M`} />
-              <Tooltip contentStyle={{ background: '#1E293B', border: 'none', borderRadius: 8 }} />
-              <Area type="monotone" dataKey="revenue" stroke="#4F46E5" fillOpacity={1} fill="url(#colorRev)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
+              <YAxis stroke="#94a3b8" fontSize={12} tickFormatter={(v) => `${(v/1000000).toFixed(1)}M`} />
+              <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+              <Area type="monotone" dataKey="revenue" stroke="#ff7e47" fillOpacity={1} fill="url(#colorRev)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

@@ -6,8 +6,6 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
-import logo from '../assets/logo.png';
-
 const MAIN_NAV = [
   { label: 'Overview', group: 'Core' },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -22,7 +20,7 @@ const MAIN_NAV = [
 ];
 
 const SYSTEM_NAV = [
-  { to: '/platform-settings', icon: Percent, label: 'Platform Fee' },
+  { to: '/platform-settings', icon: Percent, label: 'Platform Fee & Tax' },
   { to: '/audit-logs', icon: ScrollText, label: 'Audit Logs' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
@@ -38,13 +36,12 @@ const Sidebar = ({ pendingKyc = 0 }) => {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 24px' }}>
-        <img src={logo} alt="Pochi" style={{ 
-          height: 48, 
-          width: 'auto', 
-          objectFit: 'contain'
-        }} />
-        <div className="tag" style={{ marginTop: 12, textAlign: 'center' }}>Control Center</div>
+      <div className="sidebar-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 24px' }}>
+        <div className="sidebar-brand-mark">
+          <ShieldCheck size={26} />
+        </div>
+        <div className="brand-name-sidebar">Pochi <span>Admin</span></div>
+        <div className="tag" style={{ marginTop: 8, textAlign: 'center' }}>Control Center</div>
       </div>
 
       <nav className="sidebar-nav">

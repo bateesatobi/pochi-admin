@@ -2,15 +2,15 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { WS_BASE } from '../config/api';
 
 const WebSocketContext = createContext(null);
+const INTENTIONAL_CLOSE = 4003;
 
 export const WebSocketProvider = ({ children, token }) => {
   const wsRef = useRef(null);
   const [connected, setConnected] = useState(false);
   const listenersRef = useRef({});
-
-  // Reconnection backoff ref
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
+  const disposedRef = useRef(false);
 
   const subscribe = (event, callback) => {
     if (!listenersRef.current[event]) {
@@ -18,69 +18,102 @@ export const WebSocketProvider = ({ children, token }) => {
     }
     listenersRef.current[event].push(callback);
     return () => {
-      listenersRef.current[event] = listenersRef.current[event].filter(cb => cb !== callback);
+      listenersRef.current[event] = listenersRef.current[event].filter((cb) => cb !== callback);
     };
   };
 
-  const connect = () => {
-    if (!token) return;
-    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
-      return;
+  const clearReconnectTimer = () => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
     }
+  };
 
-    const wsUrl = `${WS_BASE}/ws?token=${token}`;
+  const teardownSocket = () => {
+    clearReconnectTimer();
+    const ws = wsRef.current;
+    if (!ws) return;
 
-    console.log(`📡 Connecting WebSocket to: ${wsUrl}`);
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    ws.onmessage = null;
+    ws.onerror = null;
+    ws.onclose = null;
 
-    ws.onopen = () => {
-      console.log('📡 WebSocket connected.');
-      setConnected(true);
-      reconnectAttemptsRef.current = 0;
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        const { event: eventName, data } = payload;
-        console.log(`📡 WebSocket message received: ${eventName}`, data);
-        
-        if (listenersRef.current[eventName]) {
-          listenersRef.current[eventName].forEach(cb => cb(data));
-        }
-      } catch (err) {
-        console.error('📡 Error parsing WebSocket payload:', err);
-      }
-    };
-
-    ws.onclose = (event) => {
-      setConnected(false);
-      console.log(`📡 WebSocket disconnected. Code: ${event.code}`);
-      
-      if (event.code === 4003) return; // Normal connection termination
-
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-      reconnectAttemptsRef.current += 1;
-      console.log(`📡 Reconnecting WebSocket in ${delay}ms...`);
-      
-      reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
-      }, delay);
-    };
-
-    ws.onerror = (err) => {
-      console.error('📡 WebSocket error:', err);
-    };
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.onopen = null;
+      ws.close(INTENTIONAL_CLOSE);
+    } else if (ws.readyState === WebSocket.CONNECTING) {
+      ws.onopen = () => ws.close(INTENTIONAL_CLOSE);
+    } else {
+      ws.onopen = null;
+    }
+    wsRef.current = null;
   };
 
   useEffect(() => {
-    connect();
-    return () => {
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-      if (wsRef.current) {
-        wsRef.current.close(4003); // Close normal code
+    if (!token) {
+      setConnected(false);
+      return undefined;
+    }
+
+    disposedRef.current = false;
+
+    const connect = () => {
+      if (disposedRef.current || !token) return;
+
+      const existing = wsRef.current;
+      if (existing?.readyState === WebSocket.OPEN || existing?.readyState === WebSocket.CONNECTING) {
+        return;
       }
+
+      const wsUrl = `${WS_BASE}/ws?token=${token}`;
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        if (disposedRef.current) return;
+        setConnected(true);
+        reconnectAttemptsRef.current = 0;
+      };
+
+      ws.onmessage = (event) => {
+        if (disposedRef.current) return;
+        try {
+          const payload = JSON.parse(event.data);
+          const { event: eventName, data } = payload;
+          if (listenersRef.current[eventName]) {
+            listenersRef.current[eventName].forEach((cb) => cb(data));
+          }
+        } catch (err) {
+          console.error('WebSocket payload parse error:', err);
+        }
+      };
+
+      ws.onclose = (event) => {
+        if (disposedRef.current || event.code === INTENTIONAL_CLOSE) {
+          setConnected(false);
+          return;
+        }
+
+        setConnected(false);
+        const delay = Math.min(1000 * 2 ** reconnectAttemptsRef.current, 30000);
+        reconnectAttemptsRef.current += 1;
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (!disposedRef.current) connect();
+        }, delay);
+      };
+
+      ws.onerror = () => {
+        if (disposedRef.current) return;
+      };
+    };
+
+    connect();
+
+    return () => {
+      disposedRef.current = true;
+      teardownSocket();
+      setConnected(false);
     };
   }, [token]);
 

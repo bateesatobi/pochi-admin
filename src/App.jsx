@@ -73,7 +73,7 @@ const ProtectedLayout = () => {
     '/payments': 'Payments & Disbursements',
     '/categories': 'Categories',
     '/promotions': 'Promotions',
-    '/platform-settings': 'Platform Settings',
+    '/platform-settings': 'Platform Fee & Tax',
     '/audit-logs': 'Audit Logs',
     '/settings': 'System Settings',
   };

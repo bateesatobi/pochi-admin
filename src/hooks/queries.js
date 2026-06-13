@@ -126,11 +126,19 @@ export function useAdminFxRates() {
   });
 }
 
+import { getToken } from '../context/AdminAuthContext';
+
 export function useAdminCategories() {
   return useQuery({
     queryKey: queryKeys.categories,
-    queryFn: () => api.get('/admin/categories/').then((r) => r.data),
+    queryFn: () => api.get('/admin/categories/').then((r) => r.data ?? []),
     staleTime: STALE.LONG,
+    enabled: !!getToken(),
+    retry: (count, err) => {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) return false;
+      return count < 2;
+    },
   });
 }
 

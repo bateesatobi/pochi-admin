@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import logo from '../assets/logo.png';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -32,20 +31,12 @@ const LoginPage = () => {
       <div className="login-bg-glow" />
       <div className="login-card animate-fade">
         <div className="login-brand">
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', marginBottom:24 }}>
-            <div style={{ 
-              background: '#0b182a', 
-              padding: '16px 24px', 
-              borderRadius: '20px', 
-              boxShadow: '0 10px 20px rgba(11,24,42,0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <img src={logo} alt="Pochi" style={{ height: 64, width: 'auto', objectFit: 'contain' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+            <div className="sidebar-brand-mark" style={{ width: 64, height: 64, borderRadius: 18 }}>
+              <ShieldCheck size={32} />
             </div>
           </div>
-          <div className="brand-name">POCHI <span>Admin</span></div>
+          <div className="brand-name">Pochi <span>Admin</span></div>
           <p style={{ marginTop: 8 }}>Secure administrator access only</p>
         </div>
 
