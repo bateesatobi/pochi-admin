@@ -7,8 +7,11 @@ import { useAdminCategories } from '../hooks/queries';
 import { queryKeys } from '../lib/queryKeys';
 import './Categories.css';
 
-const CHANNELS = ['RETAIL', 'WHOLESALE', 'BOTH'];
-const EMPTY_FORM = { name: '', description: '', channel: 'BOTH' };
+const CHANNELS = ['RETAIL', 'WHOLESALE'];
+const EMPTY_FORM = { name: '', description: '', channel: 'RETAIL' };
+
+const formChannel = (channel) =>
+  channel === 'WHOLESALE' ? 'WHOLESALE' : 'RETAIL';
 
 const isPlatformCategory = (cat) => cat.business_id == null;
 
@@ -46,7 +49,7 @@ const Categories = () => {
     setForm({
       name: cat.name,
       description: cat.description || '',
-      channel: cat.channel || 'BOTH',
+      channel: formChannel(cat.channel),
     });
     setEditingId(cat.id);
     setShowModal(true);

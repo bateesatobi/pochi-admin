@@ -200,7 +200,7 @@ const AdminPayments = () => {
                     <span>Gross Collected</span><span>{fmt(biz.total_collected)}</span>
                   </div>
                   <div className="ap-breakdown-row fee">
-                    <span>Platform Fee (5%)</span><span>−{fmt(biz.platform_fee)}</span>
+                    <span>Platform Fee ({platformFeePct}%)</span><span>−{fmt(biz.platform_fee)}</span>
                   </div>
                   <div className="ap-breakdown-row disbursed">
                     <span>Already Disbursed</span><span>−{fmt(biz.total_disbursed)}</span>
@@ -299,7 +299,7 @@ const AdminPayments = () => {
                 <tr>
                   <th>Business</th>
                   <th>Gross</th>
-                  <th>Fee (5%)</th>
+                  <th>Fee ({platformFeePct}%)</th>
                   <th>Net Sent</th>
                   <th>Phone · Provider</th>
                   <th>Status</th>
