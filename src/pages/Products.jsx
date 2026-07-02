@@ -15,6 +15,21 @@ const formatImage = (b64) => {
   return `data:image/jpeg;base64,${b64}`;
 };
 
+// Color preview helper
+const getColorPreview = (color) => {
+  const colorMap = {
+    'White': '#FFFFFF',
+    'Black': '#000000',
+    'Green': '#10B981',
+    'Blue': '#3B82F6',
+    'Yellow': '#F59E0B',
+    'Orange': '#F97316',
+    'Cream': '#FFFDD0',
+    'Grey': '#6B7280'
+  };
+  return colorMap[color] || '#CCCCCC';
+};
+
 const Products = () => {
   const queryClient = useQueryClient();
   const { data: products = [], isLoading: loading, refetch } = useAdminProducts();
@@ -284,6 +299,34 @@ const Products = () => {
                       {selected.inventory?.quantity || 0} In Stock
                     </span>
                   </div>
+                  {prod.available_sizes && prod.available_sizes.length > 0 && (
+                    <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
+                      <label>Available Sizes</label>
+                      <div className="detail-chips-container">
+                        {prod.available_sizes.map((size, i) => (
+                          <span key={i} className="detail-chip detail-chip-size">
+                            {size}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {prod.available_colors && prod.available_colors.length > 0 && (
+                    <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
+                      <label>Available Colors</label>
+                      <div className="detail-chips-container">
+                        {prod.available_colors.map((color, i) => (
+                          <span key={i} className="detail-chip detail-chip-color">
+                            <span 
+                              className="detail-color-dot" 
+                              style={{ background: getColorPreview(color) }}
+                            />
+                            {color}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
