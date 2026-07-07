@@ -141,7 +141,12 @@ const Products = () => {
                   </div>
                 </td>
                 <td>
-                  <div className="td-name">{p.name}</div>
+                  <div className="td-name" style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    {p.name}
+                    {p.condition === 'USED' && (
+                      <span style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.4, color:'#b45309', background:'rgba(245,158,11,0.15)', border:'1px solid rgba(245,158,11,0.35)', borderRadius:6, padding:'1px 6px' }}>Used</span>
+                    )}
+                  </div>
                   <div style={{fontFamily:'monospace',fontSize:10,color:'var(--text-subtle)'}}>{p.sku}</div>
                 </td>
                 <td>
@@ -292,6 +297,12 @@ const Products = () => {
                   <div className="detail-item">
                     <label><Layers size={10} style={{ marginRight: 4 }} /> Marketplace Category</label>
                     <span style={{ fontWeight: 700 }}>{prod.category_name || 'Uncategorized'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Condition</label>
+                    <span style={{ fontWeight: 700, color: prod.condition === 'USED' ? '#b45309' : 'var(--success)' }}>
+                      {prod.condition === 'USED' ? 'Used' : 'New'}
+                    </span>
                   </div>
                   <div className="detail-item">
                     <label><Archive size={10} style={{marginRight:4}}/> Inventory Status</label>
