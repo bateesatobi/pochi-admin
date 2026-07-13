@@ -7,6 +7,8 @@ export const queryKeys = {
   products: ['admin', 'products'],
   productDetail: (sku) => ['admin', 'product', sku],
   orders: (filters) => ['admin', 'orders', filters],
+  orderDetail: (id) => ['admin', 'order', id],
+  orderRequests: (status) => ['admin', 'order-requests', status || 'all'],
   pendingDisbursements: ['admin', 'payments', 'pending'],
   payTransactions: ['admin', 'payments', 'transactions'],
   disbursements: ['admin', 'payments', 'disbursements'],

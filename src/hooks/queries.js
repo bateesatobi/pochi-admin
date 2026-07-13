@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../context/AdminAuthContext';
 import { queryKeys } from '../lib/queryKeys';
 import { STALE } from '../lib/queryClient';
@@ -83,6 +83,49 @@ export function useAdminOrders({ statusFilter = '', startDate = '', endDate = ''
       return api.get('/admin/orders', { params }).then((r) => r.data);
     },
     staleTime: STALE.MEDIUM,
+  });
+}
+
+export function useAdminOrderDetail(orderId, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.orderDetail(orderId),
+    queryFn: () => api.get(`/admin/orders/${orderId}`).then((r) => r.data),
+    enabled: enabled && !!orderId,
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useOrderRequests(status = 'PENDING') {
+  return useQuery({
+    queryKey: queryKeys.orderRequests(status),
+    queryFn: () =>
+      api.get('/admin/order-requests', { params: { status: status || undefined } }).then((r) => r.data),
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useReviewOrderRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, action, review_note }) =>
+      api.patch(`/admin/order-requests/${requestId}`, { action, review_note }).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'order-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'order'] });
+    },
+  });
+}
+
+export function useAdminUpdateOrderStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, new_status }) =>
+      api.patch(`/admin/orders/${orderId}/status`, null, { params: { new_status } }).then((r) => r.data),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orderDetail(variables.orderId) });
+    },
   });
 }
 

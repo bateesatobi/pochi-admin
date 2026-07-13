@@ -13,6 +13,8 @@ export default function CacheSync() {
     const onOrder = invalidate([
       queryKeys.stats,
       ['admin', 'orders'],
+      ['admin', 'order-requests'],
+      ['admin', 'order'],
       queryKeys.auditLogs,
     ]);
     const onDisbursement = invalidate([
