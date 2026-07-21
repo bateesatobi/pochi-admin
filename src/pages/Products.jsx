@@ -7,6 +7,7 @@ import {
 import { api } from '../context/AdminAuthContext';
 import { useAdminProducts } from '../hooks/queries';
 import { alertSuccess, alertError, confirmDelete } from '../utils/swal';
+import { formatMoney, formatUsd } from '../utils/currency';
 
 // Helper to ensure base64 has data URI prefix
 const formatImage = (b64) => {
@@ -141,13 +142,17 @@ const Products = () => {
                   </div>
                 </td>
                 <td>
-                  <div className="td-name" style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <div className="td-name" style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
                     {p.name}
                     {p.condition === 'USED' && (
                       <span style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.4, color:'#b45309', background:'rgba(245,158,11,0.15)', border:'1px solid rgba(245,158,11,0.35)', borderRadius:6, padding:'1px 6px' }}>Used</span>
                     )}
+                    {(p.sale_channel || '').toUpperCase() === 'WHOLESALE' && (
+                      <span style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.4, color:'#1d4ed8', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.35)', borderRadius:6, padding:'1px 6px' }}>Wholesale</span>
+                    )}
                   </div>
                   <div style={{fontFamily:'monospace',fontSize:10,color:'var(--text-subtle)'}}>{p.sku}</div>
+                  {p.brand && <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:2 }}>{p.brand}</div>}
                 </td>
                 <td>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -162,12 +167,12 @@ const Products = () => {
                   </div>
                 </td>
                 <td>
-                  <div style={{ fontWeight: 700 }}>US${Number(p.listing_price || 0).toFixed(2)}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-subtle)' }}>base US${Number(p.base_price || 0).toFixed(2)}</div>
+                  <div style={{ fontWeight: 700 }}>{formatUsd(p.listing_price || 0)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-subtle)' }}>base {formatUsd(p.base_price || 0)}</div>
                 </td>
                 <td>
                   {p.display_listing_price != null ? (
-                    <div style={{ fontWeight: 600 }}>{Math.round(p.display_listing_price).toLocaleString()} {p.display_currency || ''}</div>
+                    <div style={{ fontWeight: 600 }}>{formatMoney(p.display_listing_price, p.display_currency || 'UGX')}</div>
                   ) : (
                     <span style={{ color: 'var(--text-subtle)', fontSize: 12 }}>—</span>
                   )}
@@ -287,10 +292,29 @@ const Products = () => {
                 <div className="detail-grid">
                   <div className="detail-item"><label>Product Name</label><span>{prod.name}</span></div>
                   <div className="detail-item"><label>SKU Identification</label><span style={{fontFamily:'monospace',fontSize:12, letterSpacing:0.5}}>{prod.sku}</span></div>
-                  <div className="detail-item"><label>Base Price (USD)</label><span>US${Number(prod.base_price || 0).toFixed(2)}</span></div>
-                  <div className="detail-item"><label>Listing Price (USD)</label><span style={{ fontSize: 16, fontWeight: 800 }}>US${Number(prod.listing_price || 0).toFixed(2)}</span></div>
+                  <div className="detail-item"><label>Brand</label><span>{prod.brand || '—'}</span></div>
+                  <div className="detail-item">
+                    <label>Sale Type</label>
+                    <span style={{ fontWeight: 700 }}>
+                      {(prod.sale_channel || 'RETAIL').toUpperCase() === 'WHOLESALE' ? 'Wholesale' : 'Retail'}
+                    </span>
+                  </div>
+                  <div className="detail-item"><label>Base Price (USD)</label><span>{formatUsd(prod.base_price || 0)}</span></div>
+                  <div className="detail-item"><label>Listing Price (USD)</label><span style={{ fontSize: 16, fontWeight: 800 }}>{formatUsd(prod.listing_price || 0)}</span></div>
+                  {prod.discounted_listing_price != null && (
+                    <div className="detail-item">
+                      <label>Sale Listing (USD)</label>
+                      <span style={{ fontWeight: 700, color: 'var(--success)' }}>{formatUsd(prod.discounted_listing_price)}</span>
+                    </div>
+                  )}
                   {prod.display_listing_price != null && (
-                    <div className="detail-item"><label>Buyer Price (UGX)</label><span style={{ fontWeight: 700 }}>{Math.round(prod.display_listing_price).toLocaleString()} {prod.display_currency}</span></div>
+                    <div className="detail-item"><label>Buyer Price ({prod.display_currency || 'UGX'})</label><span style={{ fontWeight: 700 }}>{formatMoney(prod.display_listing_price, prod.display_currency || 'UGX')}</span></div>
+                  )}
+                  {prod.display_discounted_listing_price != null && (
+                    <div className="detail-item">
+                      <label>Buyer Sale Price ({prod.display_currency || 'UGX'})</label>
+                      <span style={{ fontWeight: 700 }}>{formatMoney(prod.display_discounted_listing_price, prod.display_currency || 'UGX')}</span>
+                    </div>
                   )}
                   <div className="detail-item"><label>System Fee</label><span style={{ color: 'var(--primary)' }}>{prod.platform_fee}%</span></div>
                   <div className="detail-item"><label>VAT</label><span>{prod.vat}%</span></div>
@@ -304,12 +328,52 @@ const Products = () => {
                       {prod.condition === 'USED' ? 'Used' : 'New'}
                     </span>
                   </div>
+                  {(prod.sale_channel || 'RETAIL').toUpperCase() === 'WHOLESALE' ? (
+                    <>
+                      <div className="detail-item">
+                        <label>Minimum Order Qty</label>
+                        <span>{prod.minimum_order_qty != null ? prod.minimum_order_qty : '—'}</span>
+                      </div>
+                      <div className="detail-item">
+                        <label>Promo Code</label>
+                        <span>{prod.promo_code || '—'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="detail-item">
+                        <label>Retail Discount</label>
+                        <span>
+                          {prod.effective_discount_pct != null || prod.discount_pct != null
+                            ? `${prod.effective_discount_pct ?? prod.discount_pct}%`
+                            : '—'}
+                          {prod.promotion_badge ? ` · ${prod.promotion_badge}` : ''}
+                        </span>
+                      </div>
+                      <div className="detail-item">
+                        <label>Promo Code</label>
+                        <span>{prod.promo_code || '—'}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="detail-item">
                     <label><Archive size={10} style={{marginRight:4}}/> Inventory Status</label>
                     <span style={{ color: (selected.inventory?.quantity||0) === 0 ? 'var(--danger)' : 'var(--success)', fontWeight:900 }}>
                       {selected.inventory?.quantity || 0} In Stock
                     </span>
                   </div>
+                  {(prod.bulk_tiers || []).length > 0 && (
+                    <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
+                      <label>Bulk Pricing Tiers</label>
+                      <div className="detail-chips-container">
+                        {prod.bulk_tiers.map((tier, i) => (
+                          <span key={tier.id || i} className="detail-chip">
+                            {tier.min_quantity}+ · {tier.discount_pct}% off
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {prod.available_sizes && prod.available_sizes.length > 0 && (
                     <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
                       <label>Available Sizes</label>

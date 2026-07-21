@@ -5,19 +5,20 @@ import { alertSuccess, alertError } from '../utils/swal';
 import { api } from '../context/AdminAuthContext';
 import { usePlatformSettings, useAdminFxRates } from '../hooks/queries';
 import { queryKeys } from '../lib/queryKeys';
+import { formatMoney, roundForCurrency } from '../utils/currency';
 import './PlatformSettings.css';
 
-const EXAMPLE_BASE = 100000;
+const EXAMPLE_BASE = 100; // USD — catalog prices are stored in USD
 
 const computeBreakdown = (basePrice, feePct, vatPct) => {
-  const fee = Math.round(basePrice * (feePct / 100) * 100) / 100;
+  const fee = roundForCurrency(basePrice * (feePct / 100), 'USD');
   const afterFee = basePrice + fee;
-  const vat = Math.round(afterFee * (vatPct / 100) * 100) / 100;
-  const listing = Math.round((afterFee + vat) * 100) / 100;
+  const vat = roundForCurrency(afterFee * (vatPct / 100), 'USD');
+  const listing = roundForCurrency(afterFee + vat, 'USD');
   return { fee, vat, listing };
 };
 
-const fmt = (n) => `UGX ${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+const fmt = (n) => formatMoney(n, 'USD');
 
 const PlatformSettings = () => {
   const queryClient = useQueryClient();

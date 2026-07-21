@@ -10,6 +10,7 @@ import {
   useReviewOrderRequest,
 } from '../hooks/queries';
 import { toast, alertError, confirmAction } from '../utils/swal';
+import { formatMoney } from '../utils/currency';
 
 const STATUS_OPTIONS = ['', 'PENDING', 'PAID', 'FULFILLED', 'DELIVERED', 'CANCELLED', 'REFUNDED'];
 
@@ -20,6 +21,7 @@ const formatImage = (b64) => {
 };
 
 const shortId = (id) => (id ? String(id).slice(0, 8) : '—');
+const money = (amount, currency = 'UGX') => formatMoney(amount, currency);
 
 const Orders = () => {
   const [activeTab, setActiveTab] = useState('orders');
@@ -141,7 +143,7 @@ const Orders = () => {
               <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.1)', color: 'var(--success)' }}><CreditCard size={20} /></div>
               <div className="stat-info">
                 <label>Revenue (View)</label>
-                <div className="stat-value">UGX {stats.revenue.toLocaleString()}</div>
+                <div className="stat-value">{money(stats.revenue, 'UGX')}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -223,7 +225,7 @@ const Orders = () => {
                       </span>
                     </td>
                     <td>{new Date(o.created_at).toLocaleDateString()}</td>
-                    <td style={{ fontWeight: 700 }}>{o.total.toLocaleString()} <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{o.currency}</span></td>
+                    <td style={{ fontWeight: 700 }}>{money(o.total, o.currency || 'UGX')}</td>
                     <td><span className={`badge badge-${String(o.status).toLowerCase()}`}>{o.status}</span></td>
                     <td>
                       <button className="btn btn-ghost btn-sm" onClick={() => openDetails(o)}>Details</button>
@@ -346,7 +348,7 @@ const Orders = () => {
                 <div className="detail-section">
                   <div className="detail-section-title">Financial Summary</div>
                   <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)' }}>
-                    {(displayOrder.total || 0).toLocaleString()} {displayOrder.currency || 'UGX'}
+                    {money(displayOrder.total || 0, displayOrder.currency || 'UGX')}
                   </div>
                 </div>
 
@@ -363,7 +365,7 @@ const Orders = () => {
                             </div>
                             <span className={`badge badge-${String(sub.status).toLowerCase()}`}>{sub.status}</span>
                           </div>
-                          <div style={{ fontSize: 13, fontWeight: 700 }}>UGX {(sub.subtotal ?? sub.total ?? 0).toLocaleString()}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700 }}>{money(sub.subtotal ?? sub.total ?? 0, sub.currency || displayOrder.currency || 'UGX')}</div>
                           {(sub.tracking_number || sub.carrier) && (
                             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                               <Truck size={12} /> {sub.carrier || 'Carrier'} · {sub.tracking_number}
@@ -387,7 +389,7 @@ const Orders = () => {
                       {orderDetail.items.map((item, idx) => (
                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '8px 0', borderBottom: '1px dashed var(--border)' }}>
                           <span><Package size={12} style={{ verticalAlign: 'middle', marginRight: 6 }} />{item.product_name || item.sku} × {item.quantity}</span>
-                          <span style={{ fontWeight: 700 }}>UGX {((item.unit_price * item.quantity) - (item.discount_applied || 0)).toLocaleString()}</span>
+                          <span style={{ fontWeight: 700 }}>{money((item.unit_price * item.quantity) - (item.discount_applied || 0), displayOrder.currency || 'UGX')}</span>
                         </div>
                       ))}
                     </div>
