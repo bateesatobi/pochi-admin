@@ -41,7 +41,19 @@ export const AdminAuthProvider = ({ children }) => {
     return me.data;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const token = localStorage.getItem('admin_token');
+    if (token) {
+      try {
+        await axios.post(
+          `${API_BASE}/auth/signout`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch {
+        // Still clear local session even if revoke fails (e.g. Redis down / expired token)
+      }
+    }
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
     queryClient.clear();

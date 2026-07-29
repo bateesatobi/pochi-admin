@@ -16,7 +16,7 @@ const formatImage = (b64) => {
   return `data:image/jpeg;base64,${b64}`;
 };
 
-// Color preview helper
+// Color preview helper — keep in sync with business-portal product colors
 const getColorPreview = (color) => {
   const colorMap = {
     'White': '#FFFFFF',
@@ -26,7 +26,22 @@ const getColorPreview = (color) => {
     'Yellow': '#F59E0B',
     'Orange': '#F97316',
     'Cream': '#FFFDD0',
-    'Grey': '#6B7280'
+    'Grey': '#6B7280',
+    'Fog': '#D7D9DE',
+    'Obsidian': '#0B0B0F',
+    'Berry': '#8E1B4D',
+    'Lavender': '#B57EDC',
+    'Sky Blue': '#87CEEB',
+    'Cobalt Violet': '#5A2A82',
+    'Deep Blue': '#0A2A66',
+    'Silver': '#C0C0C0',
+    'Cosmic Orange': '#FF6A00',
+    'Brown': '#8B4513',
+    'Maroon': '#800000',
+    'Desert Titanium': '#C4A882',
+    'Black Titanium': '#1C1C1E',
+    'Natural Titanium': '#8E8E93',
+    'White Titanium': '#F5F5F7',
   };
   return colorMap[color] || '#CCCCCC';
 };
@@ -397,6 +412,24 @@ const Products = () => {
                               style={{ background: getColorPreview(color) }}
                             />
                             {color}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {prod.delivery_regions && prod.delivery_regions.length > 0 && (
+                    <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
+                      <label>Delivery Regions</label>
+                      <div className="detail-chips-container">
+                        {prod.delivery_regions.map((code, i) => (
+                          <span key={i} className="detail-chip detail-chip-size">
+                            {({
+                              UGANDA: 'Uganda 🇺🇬',
+                              KENYA: 'Kenya 🇰🇪',
+                              TANZANIA: 'Tanzania 🇹🇿',
+                              RWANDA: 'Rwanda 🇷🇼',
+                              EAST_AFRICA: 'East Africa 🌍',
+                            })[code] || code}
                           </span>
                         ))}
                       </div>
