@@ -9,6 +9,12 @@ import { useAdminProducts } from '../hooks/queries';
 import { alertSuccess, alertError, confirmDelete } from '../utils/swal';
 import { formatMoney, formatUsd } from '../utils/currency';
 
+const formatGender = (value) => {
+  if (!value) return null;
+  const map = { MALE: 'Male', FEMALE: 'Female', UNISEX: 'Unisex' };
+  return map[String(value).toUpperCase()] || value;
+};
+
 // Helper to ensure base64 has data URI prefix
 const formatImage = (b64) => {
   if (!b64) return null;
@@ -314,6 +320,12 @@ const Products = () => {
                       {(prod.sale_channel || 'RETAIL').toUpperCase() === 'WHOLESALE' ? 'Wholesale' : 'Retail'}
                     </span>
                   </div>
+                  {prod.gender && (
+                    <div className="detail-item">
+                      <label>Gender</label>
+                      <span>{formatGender(prod.gender)}</span>
+                    </div>
+                  )}
                   <div className="detail-item"><label>Base Price (USD)</label><span>{formatUsd(prod.base_price || 0)}</span></div>
                   <div className="detail-item"><label>Listing Price (USD)</label><span style={{ fontSize: 16, fontWeight: 800 }}>{formatUsd(prod.listing_price || 0)}</span></div>
                   {prod.discounted_listing_price != null && (
@@ -391,7 +403,7 @@ const Products = () => {
                   )}
                   {prod.available_sizes && prod.available_sizes.length > 0 && (
                     <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
-                      <label>Available Sizes</label>
+                      <label>Available Options (sizes / capacity)</label>
                       <div className="detail-chips-container">
                         {prod.available_sizes.map((size, i) => (
                           <span key={i} className="detail-chip detail-chip-size">
