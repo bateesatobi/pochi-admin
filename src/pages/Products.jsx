@@ -440,6 +440,7 @@ const Products = () => {
                               KENYA: 'Kenya 🇰🇪',
                               TANZANIA: 'Tanzania 🇹🇿',
                               RWANDA: 'Rwanda 🇷🇼',
+                              SOUTH_SUDAN: 'South Sudan 🇸🇸',
                               EAST_AFRICA: 'East Africa 🌍',
                             })[code] || code}
                           </span>
