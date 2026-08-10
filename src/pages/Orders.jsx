@@ -346,6 +346,24 @@ const Orders = () => {
                 </div>
 
                 <div className="detail-section">
+                  <div className="detail-section-title">Delivery</div>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <label>Receiver name</label>
+                      <span>{displayOrder.receiver_name || '—'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Telephone</label>
+                      <span>{displayOrder.receiver_phone || '—'}</span>
+                    </div>
+                    <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
+                      <label>Delivery address</label>
+                      <span>{displayOrder.delivery_address || '—'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="detail-section">
                   <div className="detail-section-title">Financial Summary</div>
                   <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)' }}>
                     {money(displayOrder.total || 0, displayOrder.currency || 'UGX')}
