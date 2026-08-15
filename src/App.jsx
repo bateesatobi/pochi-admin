@@ -14,6 +14,7 @@ import PlatformSettings from './pages/PlatformSettings';
 import Categories from './pages/Categories';
 import Promotions from './pages/Promotions';
 import AdminPayments from './pages/Payments';
+import SnapAsk from './pages/SnapAsk';
 import AdminNotifications from './components/AdminNotifications';
 import CacheSync from './components/CacheSync';
 
@@ -70,6 +71,7 @@ const ProtectedLayout = () => {
     '/users': 'Users & Customers',
     '/products': 'Product Moderation',
     '/orders': 'Order Oversight',
+    '/snap-ask': 'Snap & Ask',
     '/payments': 'Payments & Disbursements',
     '/categories': 'Categories',
     '/promotions': 'Promotions',
@@ -129,6 +131,7 @@ function App() {
               <Route path="/users" element={<UsersPage />} />
               <Route path="/products" element={<Products />} />
               <Route path="/orders" element={<Orders />} />
+              <Route path="/snap-ask" element={<SnapAsk />} />
               <Route path="/payments" element={<AdminPayments />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/promotions" element={<Promotions />} />

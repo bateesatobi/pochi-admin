@@ -3,11 +3,13 @@ import { api } from '../context/AdminAuthContext';
 import { queryKeys } from '../lib/queryKeys';
 import { STALE } from '../lib/queryClient';
 
-export function useAdminStats() {
+export function useAdminStats(options = {}) {
   return useQuery({
     queryKey: queryKeys.stats,
     queryFn: () => api.get('/admin/stats').then((r) => r.data),
-    staleTime: STALE.LONG,
+    staleTime: STALE.SHORT,
+    refetchInterval: 30_000,
+    ...options,
   });
 }
 
@@ -215,5 +217,75 @@ export function useAdminNotifications(options = {}) {
     queryFn: () => api.get('/admin/notifications').then((r) => r.data || []),
     staleTime: STALE.SHORT,
     ...options,
+  });
+}
+
+export function useSnapAskCases({ status = '', q = '' } = {}) {
+  const filters = { status: status || 'all', q: q || '' };
+  return useQuery({
+    queryKey: queryKeys.snapAskCases(filters),
+    queryFn: () => {
+      const params = { limit: 100 };
+      if (status) params.status = status;
+      if (q) params.q = q;
+      return api.get('/admin/snap-ask/cases', { params }).then((r) => r.data || []);
+    },
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useSnapAskCase(caseId, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.snapAskCase(caseId),
+    queryFn: () => api.get(`/admin/snap-ask/cases/${caseId}`).then((r) => r.data),
+    enabled: enabled && !!caseId,
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useSnapAskMessages(caseId, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.snapAskMessages(caseId),
+    queryFn: () => api.get(`/admin/snap-ask/cases/${caseId}/messages`).then((r) => r.data || []),
+    enabled: enabled && !!caseId,
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useUpdateSnapAskCase() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ caseId, ...body }) =>
+      api.put(`/admin/snap-ask/cases/${caseId}`, body).then((r) => r.data),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'snap-ask'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapAskCase(variables.caseId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+    },
+  });
+}
+
+export function usePostSnapAskMessage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ caseId, body, image_base64 }) =>
+      api.post(`/admin/snap-ask/cases/${caseId}/messages`, { body, image_base64 }).then((r) => r.data),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapAskMessages(variables.caseId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapAskCase(variables.caseId) });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'snap-ask'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+    },
+  });
+}
+
+export function useDeleteSnapAskCase() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (caseId) => api.delete(`/admin/snap-ask/cases/${caseId}`).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'snap-ask'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+    },
   });
 }

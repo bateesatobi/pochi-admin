@@ -2,20 +2,22 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, Package, ShoppingCart,
-  ScrollText, Settings, LogOut, ShieldCheck, CreditCard, Layers, Percent, Tag
+  ScrollText, Settings, LogOut, ShieldCheck, CreditCard, Layers, Percent, Tag, Camera
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminStats } from '../hooks/queries';
 
 const MAIN_NAV = [
   { label: 'Overview', group: 'Core' },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { label: 'Platform Management', group: 'Management' },
-  { to: '/businesses', icon: Building2, label: 'Businesses' },
-  { to: '/users', icon: Users, label: 'Users & Customers' },
+  { to: '/businesses', icon: Building2, label: 'Businesses', badgeKey: 'unverified_businesses' },
+  { to: '/users', icon: Users, label: 'Users & Customers', badgeKey: 'unverified_users' },
   { to: '/products', icon: Package, label: 'Products' },
   { to: '/categories', icon: Layers, label: 'Categories' },
   { to: '/promotions', icon: Tag, label: 'Promotions' },
   { to: '/orders', icon: ShoppingCart, label: 'Orders' },
+  { to: '/snap-ask', icon: Camera, label: 'Snap & Ask', badgeKey: 'pending_snap_ask' },
   { to: '/payments', icon: CreditCard, label: 'Payments' },
 ];
 
@@ -25,9 +27,17 @@ const SYSTEM_NAV = [
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
-const Sidebar = ({ pendingKyc = 0 }) => {
+const Sidebar = () => {
   const { admin, logout } = useAdminAuth();
   const navigate = useNavigate();
+  const { data: statsData } = useAdminStats();
+  const kpis = statsData?.kpis || {};
+
+  const badgeCounts = {
+    unverified_businesses: Number(kpis.unverified_businesses ?? kpis.pending_kyc ?? 0),
+    unverified_users: Number(kpis.unverified_users ?? 0),
+    pending_snap_ask: Number(kpis.pending_snap_ask ?? 0),
+  };
 
   const handleLogout = () => {
     logout();
@@ -45,7 +55,6 @@ const Sidebar = ({ pendingKyc = 0 }) => {
       </div>
 
       <nav className="sidebar-nav">
-        {/* Main Navigation */}
         {MAIN_NAV.map((item, i) =>
           item.group ? (
             <div key={i} className="nav-group-label">{item.label}</div>
@@ -57,14 +66,15 @@ const Sidebar = ({ pendingKyc = 0 }) => {
             >
               <item.icon size={18} />
               {item.label}
-              {item.to === '/businesses' && pendingKyc > 0 && (
-                <span className="badge">{pendingKyc}</span>
+              {item.badgeKey && badgeCounts[item.badgeKey] > 0 && (
+                <span className="badge" title={`${badgeCounts[item.badgeKey]} pending`}>
+                  {badgeCounts[item.badgeKey] > 99 ? '99+' : badgeCounts[item.badgeKey]}
+                </span>
               )}
             </NavLink>
           )
         )}
 
-        {/* System Group pushed to bottom */}
         <div style={{ marginTop: 'auto', paddingTop: 20 }}>
           <div className="nav-group-label">System</div>
           {SYSTEM_NAV.map((item) => (

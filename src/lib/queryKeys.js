@@ -19,4 +19,7 @@ export const queryKeys = {
   coupons: ['admin', 'coupons'],
   auditLogs: ['admin', 'audit-logs'],
   notifications: ['admin', 'notifications'],
+  snapAskCases: (filters) => ['admin', 'snap-ask', 'cases', filters],
+  snapAskCase: (id) => ['admin', 'snap-ask', 'case', id],
+  snapAskMessages: (id) => ['admin', 'snap-ask', 'messages', id],
 };

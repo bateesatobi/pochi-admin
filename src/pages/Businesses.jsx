@@ -18,9 +18,10 @@ const Businesses = () => {
   const [page, setPage] = useState(1);
   const PER_PAGE = 12;
 
-  const refreshBusinesses = () =>
+  const refreshBusinesses = () => {
     queryClient.invalidateQueries({ queryKey: ['admin', 'businesses'] });
-
+    queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+  };
   const filtered = businesses.filter(b =>
     b.name?.toLowerCase().includes(search.toLowerCase()) ||
     b.city?.toLowerCase().includes(search.toLowerCase()) ||

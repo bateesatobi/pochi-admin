@@ -18,9 +18,10 @@ const UsersPage = () => {
   const [page, setPage] = useState(1);
   const PER_PAGE = 15;
 
-  const refreshUsers = () =>
+  const refreshUsers = () => {
     queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-
+    queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+  };
   const filtered = users.filter(u =>
     u.email?.toLowerCase().includes(search.toLowerCase()) ||
     u.full_name?.toLowerCase().includes(search.toLowerCase())
