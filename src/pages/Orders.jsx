@@ -346,8 +346,14 @@ const Orders = () => {
                 </div>
 
                 <div className="detail-section">
-                  <div className="detail-section-title">Delivery</div>
+                  <div className="detail-section-title">Fulfillment</div>
                   <div className="detail-grid">
+                    <div className="detail-item">
+                      <label>Method</label>
+                      <span>{displayOrder.pickup_from_store ? 'Store pickup' : 'Delivery'}</span>
+                    </div>
+                    {!displayOrder.pickup_from_store && (
+                      <>
                     <div className="detail-item">
                       <label>Receiver name</label>
                       <span>{displayOrder.receiver_name || '—'}</span>
@@ -360,6 +366,8 @@ const Orders = () => {
                       <label>Delivery address</label>
                       <span>{displayOrder.delivery_address || '—'}</span>
                     </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

@@ -18,7 +18,7 @@ const formatGender = (value) => {
 // Helper to ensure base64 has data URI prefix
 const formatImage = (b64) => {
   if (!b64) return null;
-  if (b64.startsWith('data:')) return b64;
+  if (b64.startsWith('data:') || b64.startsWith('http://') || b64.startsWith('https://')) return b64;
   return `data:image/jpeg;base64,${b64}`;
 };
 

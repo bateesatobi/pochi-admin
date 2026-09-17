@@ -220,6 +220,71 @@ export function useAdminNotifications(options = {}) {
   });
 }
 
+export function useFinancingLoans() {
+  return useQuery({
+    queryKey: queryKeys.financingLoans,
+    queryFn: () => api.get('/financing/admin/loans').then((r) => r.data || []),
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useFinancingLenders() {
+  return useQuery({
+    queryKey: queryKeys.financingLenders,
+    queryFn: () => api.get('/financing/admin/lenders').then((r) => r.data || []),
+    staleTime: STALE.MEDIUM,
+  });
+}
+
+export function useFinancingNotices() {
+  return useQuery({
+    queryKey: queryKeys.financingNotices,
+    queryFn: () => api.get('/financing/admin/notices').then((r) => r.data || []),
+    staleTime: STALE.SHORT,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useFinancingUnmatched() {
+  return useQuery({
+    queryKey: queryKeys.financingUnmatched,
+    queryFn: () => api.get('/financing/admin/unmatched').then((r) => r.data || []),
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useFinancingSettlement() {
+  return useQuery({
+    queryKey: queryKeys.financingSettlement,
+    queryFn: () => api.get('/settlements/current').then((r) => r.data),
+    staleTime: STALE.MEDIUM,
+  });
+}
+
+export function useFinancingTreasury() {
+  return useQuery({
+    queryKey: queryKeys.financingTreasury,
+    queryFn: () => api.get('/financing/admin/treasury').then((r) => r.data || {}),
+    staleTime: STALE.MEDIUM,
+  });
+}
+
+export function useFinancingCredits() {
+  return useQuery({
+    queryKey: queryKeys.financingCredits,
+    queryFn: () => api.get('/financing/admin/funder-credits').then((r) => r.data || []),
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useFinancingPartners() {
+  return useQuery({
+    queryKey: queryKeys.financingPartners,
+    queryFn: () => api.get('/financing/admin/partners').then((r) => r.data || []),
+    staleTime: STALE.SHORT,
+  });
+}
+
 export function useSnapAskCases({ status = '', q = '' } = {}) {
   const filters = { status: status || 'all', q: q || '' };
   return useQuery({

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   CreditCard, ArrowUpCircle, RefreshCw, Loader2, CheckCircle2,
   XCircle, Clock, Building2, Smartphone, AlertTriangle, Send,
@@ -18,6 +18,7 @@ import { formatMoney } from '../utils/currency';
 
 const fmt = (n, currency = 'UGX') => formatMoney(n, currency);
 const fmtDate = (d) => new Date(d).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const PAGE_SIZE = 12;
 
 const STATUS_CONFIG = {
   COMPLETED: { label: 'Completed', icon: CheckCircle2, cls: 'status-completed' },
@@ -25,6 +26,9 @@ const STATUS_CONFIG = {
   FAILED:    { label: 'Failed',    icon: XCircle,       cls: 'status-failed' },
   CANCELLED: { label: 'Cancelled', icon: XCircle,       cls: 'status-cancelled' },
 };
+
+const normalize = (v) => (v ?? '').toString().toLowerCase().trim();
+const sortArrow = (sortState, key) => (sortState.key !== key ? '↕' : sortState.direction === 'asc' ? '↑' : '↓');
 
 const AdminPayments = () => {
   const queryClient = useQueryClient();
@@ -36,6 +40,12 @@ const AdminPayments = () => {
 
   const [tab, setTab] = useState('pending');
   const [disbursingId, setDisbursingId] = useState(null);
+  const [txPage, setTxPage] = useState(1);
+  const [disPage, setDisPage] = useState(1);
+  const [txSearch, setTxSearch] = useState('');
+  const [disSearch, setDisSearch] = useState('');
+  const [txSort, setTxSort] = useState({ key: 'created_at', direction: 'desc' });
+  const [disSort, setDisSort] = useState({ key: 'created_at', direction: 'desc' });
   const loading = pendingLoading && txLoading && disLoading && !pendingDis.length;
 
   const refreshPayments = () =>
@@ -108,6 +118,128 @@ const AdminPayments = () => {
   const totalFee = totalCollected * (platformFeePct / 100);
   const totalDisbursed = disbursements.reduce((s, d) => d.status === 'COMPLETED' ? s + d.net_amount : s, 0);
   const pendingTotal = pendingDis.reduce((s, b) => s + b.pending_balance, 0);
+
+  useEffect(() => {
+    setTxPage(1);
+  }, [tab]);
+
+  useEffect(() => {
+    setDisPage(1);
+  }, [tab]);
+
+  const filteredTransactions = useMemo(() => {
+    const q = normalize(txSearch);
+    if (!q) return transactions;
+    return transactions.filter(tx => normalize([
+      tx.internal_reference,
+      tx.phone_number,
+      tx.status,
+      tx.currency,
+      tx.yo_transaction_id,
+    ].join(' ')).includes(q));
+  }, [transactions, txSearch]);
+
+  const filteredDisbursements = useMemo(() => {
+    const q = normalize(disSearch);
+    if (!q) return disbursements;
+    return disbursements.filter(d => normalize([
+      d.business_name,
+      d.phone_number,
+      d.provider,
+      d.status,
+      d.yo_transaction_id,
+    ].join(' ')).includes(q));
+  }, [disbursements, disSearch]);
+
+  const txValue = (row, key) => {
+    if (key === 'amount') return Number(row.amount || 0);
+    if (key === 'created_at') return new Date(row.created_at || 0).getTime();
+    return normalize(row[key]);
+  };
+
+  const disValue = (row, key) => {
+    if (key === 'gross_amount' || key === 'platform_fee' || key === 'net_amount') return Number(row[key] || 0);
+    if (key === 'created_at') return new Date(row.created_at || 0).getTime();
+    return normalize(row[key]);
+  };
+
+  const sortedTransactions = useMemo(() => {
+    const rows = [...filteredTransactions];
+    rows.sort((a, b) => {
+      const av = txValue(a, txSort.key);
+      const bv = txValue(b, txSort.key);
+      const cmp = av > bv ? 1 : av < bv ? -1 : 0;
+      return txSort.direction === 'asc' ? cmp : -cmp;
+    });
+    return rows;
+  }, [filteredTransactions, txSort]);
+
+  const sortedDisbursements = useMemo(() => {
+    const rows = [...filteredDisbursements];
+    rows.sort((a, b) => {
+      const av = disValue(a, disSort.key);
+      const bv = disValue(b, disSort.key);
+      const cmp = av > bv ? 1 : av < bv ? -1 : 0;
+      return disSort.direction === 'asc' ? cmp : -cmp;
+    });
+    return rows;
+  }, [filteredDisbursements, disSort]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(sortedTransactions.length / PAGE_SIZE));
+    if (txPage > maxPage) setTxPage(maxPage);
+  }, [sortedTransactions.length, txPage]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(sortedDisbursements.length / PAGE_SIZE));
+    if (disPage > maxPage) setDisPage(maxPage);
+  }, [sortedDisbursements.length, disPage]);
+
+  useEffect(() => {
+    setTxPage(1);
+  }, [txSearch]);
+
+  useEffect(() => {
+    setDisPage(1);
+  }, [disSearch]);
+
+  const txTotalPages = Math.max(1, Math.ceil(sortedTransactions.length / PAGE_SIZE));
+  const disTotalPages = Math.max(1, Math.ceil(sortedDisbursements.length / PAGE_SIZE));
+  const txStart = (txPage - 1) * PAGE_SIZE;
+  const disStart = (disPage - 1) * PAGE_SIZE;
+  const txRows = sortedTransactions.slice(txStart, txStart + PAGE_SIZE);
+  const disRows = sortedDisbursements.slice(disStart, disStart + PAGE_SIZE);
+
+  const toggleSort = (state, setState, key) => {
+    setState(prev => {
+      if (prev.key !== key) return { key, direction: 'asc' };
+      return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+    });
+  };
+
+  const renderPager = (page, totalPages, onPageChange, totalRows, start) => {
+    if (totalRows <= PAGE_SIZE) return null;
+    return (
+      <div className="ap-pagination">
+        <div className="ap-pagination-info">
+          Showing {start + 1}-{Math.min(start + PAGE_SIZE, totalRows)} of {totalRows}
+        </div>
+        <div className="ap-pagination-btns">
+          <button className="ap-page-btn" disabled={page === 1} onClick={() => onPageChange(page - 1)}>‹</button>
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <button
+              key={i + 1}
+              className={`ap-page-btn ${page === i + 1 ? 'active' : ''}`}
+              onClick={() => onPageChange(i + 1)}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button className="ap-page-btn" disabled={page === totalPages} onClick={() => onPageChange(page + 1)}>›</button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="admin-payments animate-slide-up">
@@ -249,20 +381,35 @@ const AdminPayments = () => {
           </div>
         ) : (
           <div className="ap-table-wrap">
+            <div className="ap-table-tools">
+              <input
+                className="ap-table-search"
+                type="search"
+                placeholder="Search reference, phone, status, YO ref..."
+                value={txSearch}
+                onChange={(e) => setTxSearch(e.target.value)}
+              />
+              <div className="ap-table-count">{sortedTransactions.length} result{sortedTransactions.length === 1 ? '' : 's'}</div>
+            </div>
             <table className="ap-table">
               <thead>
                 <tr>
-                  <th>Reference</th>
-                  <th>Phone</th>
-                  <th>Amount</th>
-                  <th>Currency</th>
-                  <th>Status</th>
-                  <th>YO! Transaction ID</th>
-                  <th>Date</th>
+                  <th><button className={`ap-sort-head ${txSort.key === 'internal_reference' ? 'active' : ''}`} onClick={() => toggleSort(txSort, setTxSort, 'internal_reference')}>Reference {sortArrow(txSort, 'internal_reference')}</button></th>
+                  <th><button className={`ap-sort-head ${txSort.key === 'phone_number' ? 'active' : ''}`} onClick={() => toggleSort(txSort, setTxSort, 'phone_number')}>Phone {sortArrow(txSort, 'phone_number')}</button></th>
+                  <th><button className={`ap-sort-head ${txSort.key === 'amount' ? 'active' : ''}`} onClick={() => toggleSort(txSort, setTxSort, 'amount')}>Amount {sortArrow(txSort, 'amount')}</button></th>
+                  <th><button className={`ap-sort-head ${txSort.key === 'currency' ? 'active' : ''}`} onClick={() => toggleSort(txSort, setTxSort, 'currency')}>Currency {sortArrow(txSort, 'currency')}</button></th>
+                  <th><button className={`ap-sort-head ${txSort.key === 'status' ? 'active' : ''}`} onClick={() => toggleSort(txSort, setTxSort, 'status')}>Status {sortArrow(txSort, 'status')}</button></th>
+                  <th><button className={`ap-sort-head ${txSort.key === 'yo_transaction_id' ? 'active' : ''}`} onClick={() => toggleSort(txSort, setTxSort, 'yo_transaction_id')}>YO! Transaction ID {sortArrow(txSort, 'yo_transaction_id')}</button></th>
+                  <th><button className={`ap-sort-head ${txSort.key === 'created_at' ? 'active' : ''}`} onClick={() => toggleSort(txSort, setTxSort, 'created_at')}>Date {sortArrow(txSort, 'created_at')}</button></th>
                 </tr>
               </thead>
               <tbody>
-                {transactions.map(tx => {
+                {txRows.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="ap-table-empty-cell">No transactions match your search.</td>
+                  </tr>
+                )}
+                {txRows.map(tx => {
                   const cfg = STATUS_CONFIG[tx.status] || STATUS_CONFIG.PENDING;
                   const Icon = cfg.icon;
                   return (
@@ -279,6 +426,7 @@ const AdminPayments = () => {
                 })}
               </tbody>
             </table>
+            {renderPager(txPage, txTotalPages, setTxPage, sortedTransactions.length, txStart)}
           </div>
         )
       )}
@@ -295,21 +443,36 @@ const AdminPayments = () => {
           </div>
         ) : (
           <div className="ap-table-wrap">
+            <div className="ap-table-tools">
+              <input
+                className="ap-table-search"
+                type="search"
+                placeholder="Search business, phone, provider, status, YO ref..."
+                value={disSearch}
+                onChange={(e) => setDisSearch(e.target.value)}
+              />
+              <div className="ap-table-count">{sortedDisbursements.length} result{sortedDisbursements.length === 1 ? '' : 's'}</div>
+            </div>
             <table className="ap-table">
               <thead>
                 <tr>
-                  <th>Business</th>
-                  <th>Gross</th>
-                  <th>Fee ({platformFeePct}%)</th>
-                  <th>Net Sent</th>
-                  <th>Phone · Provider</th>
-                  <th>Status</th>
-                  <th>YO! Ref</th>
-                  <th>Date</th>
+                  <th><button className={`ap-sort-head ${disSort.key === 'business_name' ? 'active' : ''}`} onClick={() => toggleSort(disSort, setDisSort, 'business_name')}>Business {sortArrow(disSort, 'business_name')}</button></th>
+                  <th><button className={`ap-sort-head ${disSort.key === 'gross_amount' ? 'active' : ''}`} onClick={() => toggleSort(disSort, setDisSort, 'gross_amount')}>Gross {sortArrow(disSort, 'gross_amount')}</button></th>
+                  <th><button className={`ap-sort-head ${disSort.key === 'platform_fee' ? 'active' : ''}`} onClick={() => toggleSort(disSort, setDisSort, 'platform_fee')}>Fee ({platformFeePct}%) {sortArrow(disSort, 'platform_fee')}</button></th>
+                  <th><button className={`ap-sort-head ${disSort.key === 'net_amount' ? 'active' : ''}`} onClick={() => toggleSort(disSort, setDisSort, 'net_amount')}>Net Sent {sortArrow(disSort, 'net_amount')}</button></th>
+                  <th><button className={`ap-sort-head ${disSort.key === 'phone_number' ? 'active' : ''}`} onClick={() => toggleSort(disSort, setDisSort, 'phone_number')}>Phone · Provider {sortArrow(disSort, 'phone_number')}</button></th>
+                  <th><button className={`ap-sort-head ${disSort.key === 'status' ? 'active' : ''}`} onClick={() => toggleSort(disSort, setDisSort, 'status')}>Status {sortArrow(disSort, 'status')}</button></th>
+                  <th><button className={`ap-sort-head ${disSort.key === 'yo_transaction_id' ? 'active' : ''}`} onClick={() => toggleSort(disSort, setDisSort, 'yo_transaction_id')}>YO! Ref {sortArrow(disSort, 'yo_transaction_id')}</button></th>
+                  <th><button className={`ap-sort-head ${disSort.key === 'created_at' ? 'active' : ''}`} onClick={() => toggleSort(disSort, setDisSort, 'created_at')}>Date {sortArrow(disSort, 'created_at')}</button></th>
                 </tr>
               </thead>
               <tbody>
-                {disbursements.map(d => {
+                {disRows.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="ap-table-empty-cell">No disbursements match your search.</td>
+                  </tr>
+                )}
+                {disRows.map(d => {
                   const cfg = STATUS_CONFIG[d.status] || STATUS_CONFIG.PENDING;
                   const Icon = cfg.icon;
                   return (
@@ -327,6 +490,7 @@ const AdminPayments = () => {
                 })}
               </tbody>
             </table>
+            {renderPager(disPage, disTotalPages, setDisPage, sortedDisbursements.length, disStart)}
           </div>
         )
       )}
