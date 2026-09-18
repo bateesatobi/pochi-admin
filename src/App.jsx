@@ -15,6 +15,7 @@ import Categories from './pages/Categories';
 import Promotions from './pages/Promotions';
 import AdminPayments from './pages/Payments';
 import PayLater from './pages/PayLater';
+import Referrals from './pages/Referrals';
 import SnapAsk from './pages/SnapAsk';
 import AdminNotifications from './components/AdminNotifications';
 import CacheSync from './components/CacheSync';
@@ -75,6 +76,7 @@ const ProtectedLayout = () => {
     '/snap-ask': 'Snap & Ask',
     '/payments': 'Payments & Disbursements',
     '/pay-later': 'Pay Later',
+    '/referrals': 'Referrals',
     '/categories': 'Categories',
     '/promotions': 'Promotions',
     '/platform-settings': 'Platform Fee & Tax',
@@ -136,6 +138,7 @@ function App() {
               <Route path="/snap-ask" element={<SnapAsk />} />
               <Route path="/payments" element={<AdminPayments />} />
               <Route path="/pay-later" element={<PayLater />} />
+              <Route path="/referrals" element={<Referrals />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/promotions" element={<Promotions />} />
               <Route path="/platform-settings" element={<PlatformSettings />} />

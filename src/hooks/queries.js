@@ -285,6 +285,64 @@ export function useFinancingPartners() {
   });
 }
 
+export function useReferralCampaigns() {
+  return useQuery({
+    queryKey: queryKeys.referralCampaigns,
+    queryFn: () => api.get('/referrals/admin/campaigns').then((r) => r.data || []),
+    staleTime: STALE.SHORT,
+    retry: (count, err) => {
+      if (err?.response?.status === 404) return false;
+      return count < 2;
+    },
+  });
+}
+
+export function useReferralLeaderboard(campaignId, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.referralLeaderboard(campaignId),
+    queryFn: () =>
+      api
+        .get(`/referrals/admin/campaigns/${campaignId}/leaderboard`, { params: { limit: 100 } })
+        .then((r) => r.data || []),
+    enabled: enabled && !!campaignId,
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useReferralEvents(campaignId, fraudOnly = false, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.referralEvents(campaignId, fraudOnly),
+    queryFn: () =>
+      api
+        .get(`/referrals/admin/campaigns/${campaignId}/events`, {
+          params: { fraud_only: fraudOnly },
+        })
+        .then((r) => r.data || []),
+    enabled: enabled && !!campaignId,
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useReferralKits(campaignId, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.referralKits(campaignId),
+    queryFn: () =>
+      api.get(`/referrals/admin/campaigns/${campaignId}/kits`).then((r) => r.data || []),
+    enabled: enabled && !!campaignId,
+    staleTime: STALE.SHORT,
+  });
+}
+
+export function useReferralAnalytics(campaignId, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.referralAnalytics(campaignId),
+    queryFn: () =>
+      api.get(`/referrals/admin/analytics/${campaignId}`).then((r) => r.data || null),
+    enabled: enabled && !!campaignId,
+    staleTime: STALE.SHORT,
+  });
+}
+
 export function useSnapAskCases({ status = '', q = '' } = {}) {
   const filters = { status: status || 'all', q: q || '' };
   return useQuery({
