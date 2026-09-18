@@ -32,6 +32,7 @@ export const queryKeys = {
   referralEvents: (id, fraudOnly) => ['admin', 'referrals', 'events', id, !!fraudOnly],
   referralKits: (id) => ['admin', 'referrals', 'kits', id],
   referralAnalytics: (id) => ['admin', 'referrals', 'analytics', id],
+  referralAudit: (id) => ['admin', 'referrals', 'audit', id],
   snapAskCases: (filters) => ['admin', 'snap-ask', 'cases', filters],
   snapAskCase: (id) => ['admin', 'snap-ask', 'case', id],
   snapAskMessages: (id) => ['admin', 'snap-ask', 'messages', id],

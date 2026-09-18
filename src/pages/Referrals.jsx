@@ -1,13 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import {
   Gift, RefreshCw, Loader2, Trophy, AlertTriangle, Package,
-  BarChart3, Snowflake, CheckCircle2, X,
+  BarChart3, Snowflake, CheckCircle2, X, ScrollText,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { alertSuccess, alertError, fire } from '../utils/swal';
 import { api } from '../context/AdminAuthContext';
 import {
   useReferralAnalytics,
+  useReferralAudit,
   useReferralCampaigns,
   useReferralEvents,
   useReferralKits,
@@ -41,6 +42,12 @@ const toLocalInput = (iso) => {
   if (Number.isNaN(d.getTime())) return '';
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const fmtPct = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '0%';
+  return `${(n * 100).toFixed(1)}%`;
 };
 
 const Referrals = () => {
@@ -79,6 +86,7 @@ const Referrals = () => {
   const { data: fraudEvents = [], refetch: refetchFraud } = useReferralEvents(campaignId, true, !!campaignId && tab === 'fraud');
   const { data: kits = [], isLoading: kitsLoading, refetch: refetchKits } = useReferralKits(campaignId, !!campaignId);
   const { data: analytics, refetch: refetchAnalytics } = useReferralAnalytics(campaignId, !!campaignId);
+  const { data: audit = [], isLoading: auditLoading, refetch: refetchAudit } = useReferralAudit(campaignId, !!campaignId && tab === 'audit');
 
   const disabled = campaignsError && campaignsErr?.response?.status === 404;
 
@@ -90,6 +98,7 @@ const Referrals = () => {
     refetchFraud();
     refetchKits();
     refetchAnalytics();
+    refetchAudit();
   };
 
   const openCreate = () => {
@@ -255,6 +264,7 @@ const Referrals = () => {
     { id: 'fraud', label: 'Fraud', icon: AlertTriangle, count: fraudEvents.length },
     { id: 'kits', label: 'Kits', icon: Package, count: kits.length },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, count: null },
+    { id: 'audit', label: 'Audit', icon: ScrollText, count: audit.length },
   ];
 
   const kpis = useMemo(() => ({
@@ -262,7 +272,7 @@ const Referrals = () => {
     verified: analytics?.verified_activations ?? events.filter((e) => e.verified).length,
     rate: analytics?.activation_rate ?? 0,
     fraud: analytics?.fraud_flagged ?? fraudEvents.length,
-    cost: analytics?.estimated_cost ?? 0,
+    cost: analytics?.actual_cost ?? analytics?.estimated_cost ?? 0,
   }), [analytics, events, fraudEvents]);
 
   if (campaignsLoading) return <Loading />;
@@ -319,7 +329,7 @@ const Referrals = () => {
           <div className="ref-kpi-value">{kpis.fraud}</div>
         </div>
         <div className="ref-kpi">
-          <div className="ref-kpi-label">Est. coupon cost</div>
+          <div className="ref-kpi-label">Redeemed cost</div>
           <div className="ref-kpi-value">{formatMoney(kpis.cost, 'UGX')}</div>
         </div>
       </div>
@@ -538,7 +548,10 @@ const Referrals = () => {
               <div><span>Verified activations</span><strong>{analytics.verified_activations}</strong></div>
               <div><span>Activation rate</span><strong>{fmtPct(analytics.activation_rate)}</strong></div>
               <div><span>Coupon redemptions</span><strong>{analytics.coupon_redemptions}</strong></div>
-              <div><span>Estimated cost</span><strong>{formatMoney(analytics.estimated_cost, 'UGX')}</strong></div>
+              <div><span>Wishlist activations</span><strong>{analytics.wishlist_activations ?? 0}</strong></div>
+              <div><span>Purchase activations</span><strong>{analytics.purchase_activations ?? 0}</strong></div>
+              <div><span>Estimated cost (cap)</span><strong>{formatMoney(analytics.estimated_cost, 'UGX')}</strong></div>
+              <div><span>Actual redeemed</span><strong>{formatMoney(analytics.actual_cost || 0, 'UGX')}</strong></div>
               <div><span>Fraud flagged</span><strong>{analytics.fraud_flagged}</strong></div>
             </div>
           )}
@@ -562,6 +575,40 @@ const Referrals = () => {
                       <td>{e.fraud_flag ? e.fraud_reason || 'flagged' : '—'}</td>
                       <td>{e.qualify_reason || '—'}</td>
                       <td>{e.install_ts ? new Date(e.install_ts).toLocaleString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'audit' && (
+        <div className="ref-panel">
+          <div className="ref-panel-head">
+            <h2>Campaign audit log</h2>
+          </div>
+          {auditLoading ? <Loading /> : audit.length === 0 ? (
+            <Empty title="No audit events" body="Code issue, attribution, activation, and kit actions appear here." />
+          ) : (
+            <div className="ref-table-wrap">
+              <table className="ref-table">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Event</th>
+                    <th>Actor</th>
+                    <th>Payload</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {audit.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.created_at ? new Date(row.created_at).toLocaleString() : '—'}</td>
+                      <td>{row.event_type}</td>
+                      <td className="ref-muted">{row.actor_user_id ? String(row.actor_user_id).slice(0, 8) : '—'}</td>
+                      <td className="ref-muted">{row.payload_json ? JSON.stringify(row.payload_json) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>

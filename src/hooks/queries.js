@@ -343,6 +343,16 @@ export function useReferralAnalytics(campaignId, enabled = true) {
   });
 }
 
+export function useReferralAudit(campaignId, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.referralAudit(campaignId),
+    queryFn: () =>
+      api.get(`/referrals/admin/audit/${campaignId}`, { params: { limit: 100 } }).then((r) => r.data || []),
+    enabled: enabled && !!campaignId,
+    staleTime: STALE.SHORT,
+  });
+}
+
 export function useSnapAskCases({ status = '', q = '' } = {}) {
   const filters = { status: status || 'all', q: q || '' };
   return useQuery({
