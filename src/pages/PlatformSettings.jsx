@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Percent, Save, RefreshCw, Coins, Receipt, Globe, Info } from 'lucide-react';
+import { Percent, Save, RefreshCw, Coins, Receipt, Globe, Info, Plus, Trash2 } from 'lucide-react';
 import { alertSuccess, alertError } from '../utils/swal';
 import { api } from '../context/AdminAuthContext';
 import { usePlatformSettings, useAdminFxRates } from '../hooks/queries';
@@ -9,6 +9,10 @@ import { formatMoney, roundForCurrency } from '../utils/currency';
 import './PlatformSettings.css';
 
 const EXAMPLE_BASE = 100; // USD — catalog prices are stored in USD
+
+const DEFAULT_OVERRIDE_ROWS = [
+  { pair: 'USD-SSP', rate: '' },
+];
 
 const computeBreakdown = (basePrice, feePct, vatPct) => {
   const fee = roundForCurrency(basePrice * (feePct / 100), 'USD');
@@ -20,18 +24,41 @@ const computeBreakdown = (basePrice, feePct, vatPct) => {
 
 const fmt = (n) => formatMoney(n, 'USD');
 
+const overridesToRows = (overrides) => {
+  const entries = Object.entries(overrides || {});
+  if (!entries.length) return DEFAULT_OVERRIDE_ROWS.map((r) => ({ ...r }));
+  return entries.map(([pair, rate]) => ({ pair, rate: String(rate) }));
+};
+
+const rowsToOverrides = (rows) => {
+  const out = {};
+  for (const row of rows) {
+    const pair = String(row.pair || '').trim().toUpperCase();
+    if (!pair) continue;
+    const rate = Number(row.rate);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error(`Enter a positive rate for ${pair || 'each pair'}`);
+    }
+    out[pair] = rate;
+  }
+  return out;
+};
+
 const PlatformSettings = () => {
   const queryClient = useQueryClient();
   const { data: settings, isLoading, isError, error, refetch } = usePlatformSettings();
   const { data: fxPreview, isLoading: fxLoading, refetch: refetchFx } = useAdminFxRates();
   const [feePct, setFeePct] = useState(5);
   const [vatPct, setVatPct] = useState(18);
+  const [overrideRows, setOverrideRows] = useState(DEFAULT_OVERRIDE_ROWS);
   const [saving, setSaving] = useState(false);
+  const [savingFx, setSavingFx] = useState(false);
 
   useEffect(() => {
     if (settings) {
       setFeePct(settings.default_platform_fee_pct);
       setVatPct(settings.default_vat_pct);
+      setOverrideRows(overridesToRows(settings.fx_rates_json));
     }
   }, [settings]);
 
@@ -49,6 +76,7 @@ const PlatformSettings = () => {
     e?.preventDefault();
     setSaving(true);
     try {
+      // Fee/VAT only — do not touch fx_rates_json so existing overrides stay intact.
       await api.patch('/admin/settings/platform', {
         default_platform_fee_pct: parseFloat(feePct),
         default_vat_pct: parseFloat(vatPct),
@@ -61,6 +89,47 @@ const PlatformSettings = () => {
       alertError('Error', err.response?.data?.detail || 'Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveFxOverrides = async () => {
+    setSavingFx(true);
+    try {
+      const fx_rates_json = rowsToOverrides(overrideRows);
+      await api.patch('/admin/settings/platform', {
+        fx_provider: 'live',
+        fx_rates_json,
+      });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.platformSettings });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.fxRates });
+      await refetchFx();
+      alertSuccess(
+        'FX overrides saved',
+        'Live market rates stay on. Your pairs override only when set (e.g. USD-SSP).'
+      );
+    } catch (err) {
+      alertError('Error', err.message || err.response?.data?.detail || 'Failed to save FX overrides');
+    } finally {
+      setSavingFx(false);
+    }
+  };
+
+  const handleClearFxOverrides = async () => {
+    setSavingFx(true);
+    try {
+      await api.patch('/admin/settings/platform', {
+        fx_provider: 'live',
+        fx_rates_json: {},
+      });
+      setOverrideRows(DEFAULT_OVERRIDE_ROWS.map((r) => ({ ...r })));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.platformSettings });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.fxRates });
+      await refetchFx();
+      alertSuccess('Overrides cleared', 'Pricing again uses the live FX feed only.');
+    } catch (err) {
+      alertError('Error', err.response?.data?.detail || 'Failed to clear FX overrides');
+    } finally {
+      setSavingFx(false);
     }
   };
 
@@ -129,8 +198,8 @@ const PlatformSettings = () => {
       <div className="settings-tip-banner glass">
         <div className="tip-icon"><Info size={18} /></div>
         <p>
-          These rates drive how merchant base prices become buyer listing prices, how checkout totals are calculated,
-          and how platform fees are deducted from disbursements. Changes apply to new pricing calculations immediately.
+          Fee and VAT work as before. Exchange rates stay on the live feed by default.
+          Optional overrides (e.g. USD-SSP) only replace those pairs — Uganda UGX checkout and Pesapal rails are unchanged.
         </p>
       </div>
 
@@ -233,7 +302,7 @@ const PlatformSettings = () => {
           <div>
             <h3><Coins size={18} style={{ verticalAlign: 'middle', marginRight: 8 }} />Exchange rates</h3>
             <p>
-              Live public market data · {fxPreview?.provider || 'live'} feed · refreshed hourly
+              Live public market data · {fxPreview?.provider || 'live'} feed · overrides apply on top
             </p>
           </div>
           <button type="button" className="btn-settings-ghost" onClick={() => refetchFx()} disabled={fxLoading}>
@@ -255,6 +324,69 @@ const PlatformSettings = () => {
             ))}
           </div>
         )}
+
+        <div className="fx-overrides">
+          <div className="fx-overrides-header">
+            <div>
+              <h4>Admin FX overrides</h4>
+              <p>Optional. Live rates remain the default. Add USD-SSP (and others) without changing UGX behaviour.</p>
+            </div>
+            <div className="fx-overrides-actions">
+              <button
+                type="button"
+                className="btn-settings-ghost"
+                onClick={() => setOverrideRows((rows) => [...rows, { pair: '', rate: '' }])}
+              >
+                <Plus size={16} /> Add pair
+              </button>
+              <button type="button" className="btn-settings-ghost" onClick={handleClearFxOverrides} disabled={savingFx}>
+                Clear
+              </button>
+              <button type="button" className="btn-settings-save" onClick={handleSaveFxOverrides} disabled={savingFx}>
+                <span className="icon-box"><Save size={18} /></span>
+                {savingFx ? 'Saving...' : 'Save overrides'}
+              </button>
+            </div>
+          </div>
+
+          <div className="fx-override-rows">
+            {overrideRows.map((row, idx) => (
+              <div key={`fx-row-${idx}`} className="fx-override-row">
+                <input
+                  aria-label={`FX pair ${idx + 1}`}
+                  placeholder="USD-SSP"
+                  value={row.pair}
+                  onChange={(e) => {
+                    const next = [...overrideRows];
+                    next[idx] = { ...next[idx], pair: e.target.value };
+                    setOverrideRows(next);
+                  }}
+                />
+                <input
+                  aria-label={`FX rate ${idx + 1}`}
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="Rate"
+                  value={row.rate}
+                  onChange={(e) => {
+                    const next = [...overrideRows];
+                    next[idx] = { ...next[idx], rate: e.target.value };
+                    setOverrideRows(next);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn-settings-ghost"
+                  aria-label={`Remove FX pair ${idx + 1}`}
+                  onClick={() => setOverrideRows((rows) => (rows.length <= 1 ? DEFAULT_OVERRIDE_ROWS.map((r) => ({ ...r })) : rows.filter((_, i) => i !== idx)))}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
