@@ -95,29 +95,44 @@ const AdminPayments = () => {
         { params: { notes } }
       );
 
+      const status = (res.data.status || '').toUpperCase();
       if (res.data.success) {
-        alertSuccess(
-          'Disbursement Successful',
-          `Sent ${fmt(res.data.amount_disbursed)} to ${business.business_name}. Reference: ${res.data.yo_transaction_id || 'N/A'}`,
-          { timer: 4000 }
-        );
-        refreshPayments();
+        if (status === 'PENDING') {
+          alertWarning(
+            'Payout Submitted — Awaiting Authorization',
+            res.data.message
+              || `Payout of ${fmt(res.data.amount_disbursed)} to ${business.business_name} was accepted by Yo! and is awaiting authorization. Do not resubmit.`
+          );
+        } else {
+          alertSuccess(
+            'Disbursement Successful',
+            `Sent ${fmt(res.data.amount_disbursed)} to ${business.business_name}. Reference: ${res.data.yo_transaction_id || 'N/A'}`,
+            { timer: 4000 }
+          );
+        }
+        await refreshPayments();
+        setTab('disbursements');
       } else {
-        alertError('Disbursement Failed', res.data.message);
+        alertError('Disbursement Failed', res.data.message || 'Yo! rejected the payout.');
+        await refreshPayments();
       }
     } catch (err) {
       const msg = err.response?.data?.detail || 'Disbursement failed. Please try again.';
       alertError('Error', msg);
+      await refreshPayments();
     } finally {
       setDisbursingId(null);
     }
   };
 
-  // KPI totals
+  // KPI totals — PENDING payouts are already committed with Yo and must count as disbursed
   const totalCollected = transactions.reduce((s, t) => t.status === 'COMPLETED' ? s + t.amount : s, 0);
   const totalFee = totalCollected * (platformFeePct / 100);
-  const totalDisbursed = disbursements.reduce((s, d) => d.status === 'COMPLETED' ? s + d.net_amount : s, 0);
-  const pendingTotal = pendingDis.reduce((s, b) => s + b.pending_balance, 0);
+  const totalDisbursed = disbursements.reduce(
+    (s, d) => (d.status === 'COMPLETED' || d.status === 'PENDING' ? s + Number(d.net_amount || 0) : s),
+    0,
+  );
+  const pendingTotal = pendingDis.reduce((s, b) => s + Number(b.pending_balance || 0), 0);
 
   useEffect(() => {
     setTxPage(1);
@@ -352,13 +367,30 @@ const AdminPayments = () => {
                   </div>
                 )}
 
+                {biz.has_open_payout ? (
+                  <div className="ap-payout-warning">
+                    <Clock size={14} />
+                    <span>Payout already submitted and awaiting Yo! authorization/processing. Disburse is locked to prevent duplicates.</span>
+                  </div>
+                ) : null}
+
                 <button
                   className="ap-btn-disburse"
                   onClick={() => handleDisburse(biz)}
-                  disabled={disbursingId === biz.business_id || !biz.payout_account}
+                  disabled={
+                    disbursingId === biz.business_id
+                    || !biz.payout_account
+                    || biz.has_open_payout
+                    || biz.can_disburse === false
+                    || Number(biz.pending_balance || 0) <= 100
+                  }
                 >
                   {disbursingId === biz.business_id ? (
                     <><Loader2 size={15} className="spin" /> Disbursing via YO!...</>
+                  ) : biz.has_open_payout ? (
+                    <><Clock size={15} /> Awaiting Yo! Authorization</>
+                  ) : Number(biz.pending_balance || 0) <= 100 ? (
+                    <><CheckCircle2 size={15} /> Fully Disbursed</>
                   ) : (
                     <><Send size={15} /> Disburse {fmt(biz.pending_balance)} via YO! Payments</>
                   )}
