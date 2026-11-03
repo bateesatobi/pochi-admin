@@ -14,6 +14,7 @@ import PlatformSettings from './pages/PlatformSettings';
 import Categories from './pages/Categories';
 import Promotions from './pages/Promotions';
 import AdminPayments from './pages/Payments';
+import AdminWallets from './pages/Wallets';
 import PayLater from './pages/PayLater';
 import Referrals from './pages/Referrals';
 import SnapAsk from './pages/SnapAsk';
@@ -75,6 +76,7 @@ const ProtectedLayout = () => {
     '/orders': 'Order Oversight',
     '/snap-ask': 'Snap & Ask',
     '/payments': 'Payments & Disbursements',
+    '/wallets': 'Pochi Wallet',
     '/pay-later': 'Pay Later',
     '/referrals': 'Referrals',
     '/categories': 'Categories',
@@ -137,6 +139,7 @@ function App() {
               <Route path="/orders" element={<Orders />} />
               <Route path="/snap-ask" element={<SnapAsk />} />
               <Route path="/payments" element={<AdminPayments />} />
+              <Route path="/wallets" element={<AdminWallets />} />
               <Route path="/pay-later" element={<PayLater />} />
               <Route path="/referrals" element={<Referrals />} />
               <Route path="/categories" element={<Categories />} />

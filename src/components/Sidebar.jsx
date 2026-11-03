@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, Package, ShoppingCart,
-  ScrollText, Settings, LogOut, ShieldCheck,   CreditCard, Layers, Percent, Tag, Camera, Banknote, Gift
+  ScrollText, Settings, LogOut, ShieldCheck, CreditCard, Layers, Percent, Tag, Camera, Banknote, Gift, Wallet
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useAdminStats } from '../hooks/queries';
@@ -19,6 +19,7 @@ const MAIN_NAV = [
   { to: '/orders', icon: ShoppingCart, label: 'Orders' },
   { to: '/snap-ask', icon: Camera, label: 'Snap & Ask', badgeKey: 'pending_snap_ask' },
   { to: '/payments', icon: CreditCard, label: 'Payments' },
+  { to: '/wallets', icon: Wallet, label: 'Wallets' },
   { to: '/pay-later', icon: Banknote, label: 'Pay Later' },
   { to: '/referrals', icon: Gift, label: 'Referrals' },
 ];

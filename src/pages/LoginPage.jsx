@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
 const LoginPage = () => {
@@ -28,57 +28,92 @@ const LoginPage = () => {
 
   return (
     <div className="login-page">
-      <div className="login-bg-glow" />
-      <div className="login-card animate-fade">
-        <div className="login-brand">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-            <div className="sidebar-brand-mark" style={{ width: 64, height: 64, borderRadius: 18 }}>
-              <ShieldCheck size={32} />
-            </div>
+      <div className="login-shell">
+        <aside className="login-panel-brand" aria-hidden="false">
+          <div className="login-panel-inner">
+            <div className="login-mark" aria-hidden="true">P</div>
+            <h1 className="login-brand-title">Pochi</h1>
+            <p className="login-brand-tagline">
+              Operations console for marketplace payments, vendors, and compliance.
+            </p>
+            <ul className="login-brand-points">
+              <li>Disbursements &amp; wallet controls</li>
+              <li>Vendor KYC and catalog oversight</li>
+              <li>Pay Later and referral campaigns</li>
+            </ul>
           </div>
-          <div className="brand-name">Pochi <span>Admin</span></div>
-          <p style={{ marginTop: 8 }}>Secure administrator access only</p>
-        </div>
+          <div className="login-panel-footer">Authorized staff only · pakacha.com</div>
+        </aside>
 
-        {error && <div className="login-error" style={{marginBottom:20}}>{error}</div>}
+        <main className="login-panel-form">
+          <div className="login-form-wrap animate-fade">
+            <header className="login-form-header">
+              <p className="login-kicker">Admin sign in</p>
+              <h2>Welcome back</h2>
+              <p className="login-form-sub">Use your administrator email and password.</p>
+            </header>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Admin Email</label>
-            <input
-              className="form-input"
-              type="email"
-              placeholder="admin@pakacha.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Password</label>
-            <div style={{ position:'relative' }}>
-              <input
-                className="form-input"
-                type={showPass ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                style={{ paddingRight:44 }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPass(v => !v)}
-                style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'var(--text-subtle)', cursor:'pointer' }}
-              >
-                {showPass ? <EyeOff size={16}/> : <Eye size={16}/>}
+            {error && (
+              <div className="login-error" role="alert">
+                {error}
+              </div>
+            )}
+
+            <form className="login-form" onSubmit={handleSubmit} noValidate>
+              <div className="form-group">
+                <label htmlFor="admin-email">Email</label>
+                <div className="login-input-wrap">
+                  <Mail size={16} className="login-input-icon" aria-hidden="true" />
+                  <input
+                    id="admin-email"
+                    className="form-input login-input"
+                    type="email"
+                    autoComplete="username"
+                    placeholder="admin@pakacha.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="admin-password">Password</label>
+                <div className="login-input-wrap">
+                  <Lock size={16} className="login-input-icon" aria-hidden="true" />
+                  <input
+                    id="admin-password"
+                    className="form-input login-input"
+                    type={showPass ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="login-pass-toggle"
+                    onClick={() => setShowPass((v) => !v)}
+                    aria-label={showPass ? 'Hide password' : 'Show password'}
+                  >
+                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <button className="login-btn" type="submit" disabled={loading}>
+                {loading ? (
+                  'Signing in…'
+                ) : (
+                  <>
+                    Sign in <ArrowRight size={16} aria-hidden="true" />
+                  </>
+                )}
               </button>
-            </div>
+            </form>
           </div>
-          <button className="login-btn" type="submit" disabled={loading}>
-            {loading ? 'Authenticating...' : 'Access Admin Portal'}
-          </button>
-        </form>
+        </main>
       </div>
     </div>
   );
